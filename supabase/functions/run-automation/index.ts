@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { initSession, login } from "../_shared/woningnet/auth.ts";
+import { login } from "../_shared/woningnet/auth.ts";
 import { fetchListings } from "../_shared/woningnet/listings.ts";
 
 type StepLog = { step: string; status: string; error?: string; ts: string };
@@ -22,19 +22,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
-    const { user_id, trigger_type = "manual" } = await req.json();
+    // Validate the caller's identity via JWT
+    const token = authHeader.replace("Bearer ", "");
+    const authClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: authError } = await authClient.auth.getUser(token);
 
-    if (!user_id) {
+    const { trigger_type = "manual" } = await req.json();
+
+    // Use the authenticated user's ID — never trust client-supplied user_id
+    const user_id = user?.id;
+    if (authError || !user_id) {
       return new Response(
-        JSON.stringify({ error: "user_id is required" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Create run record
     const { data: run, error: insertError } = await supabase
@@ -74,14 +84,10 @@ Deno.serve(async (req) => {
     }
 
     const secrets = [email, password];
-    let currentStep = "session_init";
+    let currentStep = "login";
 
     try {
-      let session = await initSession();
-      steps.push({ step: "session_init", status: "success", ts: new Date().toISOString() });
-
-      currentStep = "login";
-      session = await login(session, email, password);
+      const session = await login(email, password);
       steps.push({ step: "login", status: "success", ts: new Date().toISOString() });
 
       currentStep = "fetch_listings";

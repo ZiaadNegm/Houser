@@ -9,6 +9,8 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { data: { session } } = await supabase.auth.getSession();
+
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/run-automation`,
@@ -16,9 +18,9 @@ export async function POST() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Authorization": `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ user_id: user.id, trigger_type: "manual" }),
+        body: JSON.stringify({ trigger_type: "manual" }),
       }
     );
 
