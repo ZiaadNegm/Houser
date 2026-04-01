@@ -1,6 +1,23 @@
 # WoningNet DAK Auto-Apply
 
-A web application that fetches your WoningNet DAK (Almere) listings, displays them ranked by provisional queue position, and logs each run with full result data for debugging.
+A web application that automatically checks [WoningNet DAK](https://almere.mijndak.nl) (Almere) listings on a schedule, ranks available housing opportunities by provisional queue position, and manages your active application slots — applying to the best opportunities and replacing weaker ones when something better appears.
+
+In the Dutch social housing system, WoningNet lets you respond to rental listings and your position in the queue depends on your registration time. Because you can only hold a limited number of active responses at once, timing and slot management matter. This app automates the entire loop: fetch listings, score them, apply, and swap out weaker applications — so you don't miss opportunities by not checking in time.
+
+For the full product vision including scoring rules, apply/revoke logic, and future phases, see [productRequirements.md](./productRequirements.md).
+
+## What's currently implemented
+
+The project is in early MVP stage. The following is working end-to-end:
+
+- **App authentication** — sign up / sign in via Supabase Auth
+- **WoningNet integration** — session-based login and listing retrieval from the WoningNet DAK SOAP/XML API
+- **Listing display** — dashboard shows all available listings sorted by queue position, with address, rent, rooms, contract type, deadline, and applicant count
+- **Manual trigger** — click "Trigger Run" to fetch fresh listings on demand
+- **Run logging** — each run is persisted with status, result data (full listing JSON), and a step-by-step execution log for debugging
+- **Error handling** — failed runs show an error banner on the dashboard; credentials are sanitized from all stored data
+
+**Not yet implemented:** automated scheduling, scoring/ranking engine, auto-apply, revoke-and-replace, blacklist management, and metrics. See the [PRD](./productRequirements.md) for the full MVP scope.
 
 ## Tech stack
 
@@ -11,10 +28,8 @@ A web application that fetches your WoningNet DAK (Almere) listings, displays th
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18 or higher
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (must be running before setup)
-- [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (`brew install supabase/tap/supabase` or `npx supabase`)
-- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/) v18+
 - A **WoningNet Almere DAK** account ([almere.mijndak.nl](https://almere.mijndak.nl))
 
 ## Setup
