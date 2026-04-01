@@ -1,16 +1,13 @@
 import type { WoningNetSession } from "./types.ts";
+import { API_VERSIONS, BASE_URL, USER_AGENT } from "./constants.ts";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const BASE_URL = "https://almere.mijndak.nl";
 const LOGIN_PATH =
   "/screenservices/DAKWP/Onboarding/Home/ActionLoginServer";
 const MODULE_VERSION_PATH = "/moduleservices/moduleversioninfo";
-const LOGIN_API_VERSION = "VaTA0J2xvZd_AfHiRpFaJA";
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 // ---------------------------------------------------------------------------
 // extractCsrf
@@ -160,7 +157,7 @@ export async function login(
   const loginPayload = {
     versionInfo: {
       moduleVersion,
-      apiVersion: LOGIN_API_VERSION,
+      apiVersion: API_VERSIONS.login,
     },
     viewName: "Onboarding.Home",
     inputParameters: {
