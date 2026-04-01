@@ -11,5 +11,7 @@ export interface AutomationRun {
   listings_found: number;
   actions_taken: number;
   error_message: string | null;
+  result_data: any | null;
+  step_log: any | null;
   created_at: string;
 }

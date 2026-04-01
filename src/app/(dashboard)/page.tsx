@@ -2,7 +2,18 @@ import { createClient } from "@/lib/supabase/server";
 import { getRecentRuns } from "@/lib/repositories/runs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TriggerRunButton } from "@/components/trigger-run-button";
+
+interface Listing {
+  id: string;
+  address: string;
+  position: number;
+  rooms: number;
+  rentNet: string;
+  deadline: string;
+  hasApplied: boolean;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -11,7 +22,7 @@ export default async function DashboardPage() {
   let runs: Awaited<ReturnType<typeof getRecentRuns>> = [];
   if (user) {
     try {
-      runs = await getRecentRuns(supabase, user.id, 5);
+      runs = await getRecentRuns(supabase, user.id, 10);
     } catch {
       // Table may not exist yet during initial setup
     }
@@ -21,6 +32,11 @@ export default async function DashboardPage() {
   const lastRun = runs[0];
   const successCount = runs.filter((r) => r.status === "success").length;
   const failedCount = runs.filter((r) => r.status === "failed").length;
+
+  const latestSuccessful = runs.find((r) => r.status === "success" && r.result_data);
+  const listings: Listing[] = latestSuccessful?.result_data
+    ? (latestSuccessful.result_data as Listing[]).sort((a, b) => a.position - b.position)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -77,6 +93,57 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {lastRun?.status === "failed" && lastRun.error_message && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-sm font-medium text-destructive">
+              Last run failed: {lastRun.error_message}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {listings.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Listings</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {listings.length} listings from last successful run
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Address</TableHead>
+                  <TableHead className="text-right">Position</TableHead>
+                  <TableHead className="text-right">Rooms</TableHead>
+                  <TableHead className="text-right">Rent</TableHead>
+                  <TableHead>Deadline</TableHead>
+                  <TableHead>Applied</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {listings.map((listing) => (
+                  <TableRow key={listing.id}>
+                    <TableCell className="font-medium">{listing.address}</TableCell>
+                    <TableCell className="text-right">{listing.position}</TableCell>
+                    <TableCell className="text-right">{listing.rooms}</TableCell>
+                    <TableCell className="text-right">{listing.rentNet}</TableCell>
+                    <TableCell>{listing.deadline}</TableCell>
+                    <TableCell>
+                      {listing.hasApplied && (
+                        <Badge variant="default">Applied</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
