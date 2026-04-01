@@ -142,11 +142,3 @@ To reset the database and re-apply all migrations:
 ```bash
 supabase db reset
 ```
-
-## Stopping
-
-```bash
-supabase stop        # Stops local Supabase (Postgres, Auth, etc.)
-```
-
-Press `Ctrl+C` in each terminal to stop the Next.js dev server and Edge Functions.
