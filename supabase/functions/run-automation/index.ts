@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { login } from "../_shared/woningnet/auth.ts";
 import { fetchListings } from "../_shared/woningnet/listings.ts";
+import { resolveUserId, checkOverlap } from "./auth_helpers.ts";
 
 type StepLog = { step: string; status: string; error?: string; ts: string };
 
@@ -30,32 +31,21 @@ Deno.serve(async (req) => {
     const { trigger_type = "manual", user_id: bodyUserId } = await req.json();
 
     // Dual auth: service-role calls pass user_id in body; user calls derive it from JWT
-    let user_id: string;
-    if (token === serviceRoleKey) {
-      if (!bodyUserId) return jsonResponse({ error: "user_id required for service calls" }, 400);
-      user_id = bodyUserId;
-    } else {
-      const authClient = createClient(supabaseUrl, anonKey, {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      });
-      const { data: { user }, error: authError } = await authClient.auth.getUser(token);
-      if (authError || !user?.id) return jsonResponse({ error: "Invalid or expired token" }, 401);
-      user_id = user.id;
-    }
+    const authResult = await resolveUserId({
+      token,
+      serviceRoleKey,
+      bodyUserId,
+      supabaseUrl,
+      anonKey,
+    });
+    if ("error" in authResult) return jsonResponse({ error: authResult.error }, authResult.status);
+    const user_id = authResult.user_id;
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Overlap check — reject if a recent run is still active
-    const { data: activeRun } = await supabase
-      .from("automation_runs")
-      .select("id")
-      .eq("user_id", user_id)
-      .in("status", ["queued", "running"])
-      .filter("started_at", "gt", new Date(Date.now() - 60000).toISOString())
-      .limit(1)
-      .maybeSingle();
-
-    if (activeRun) return jsonResponse({ error: "Run already in progress", run_id: activeRun.id }, 409);
+    const overlap = await checkOverlap(supabase, user_id);
+    if (overlap) return jsonResponse({ error: "Run already in progress", run_id: overlap.id }, 409);
 
     // Create run record
     const { data: run, error: insertError } = await supabase
