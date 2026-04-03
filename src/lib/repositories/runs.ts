@@ -37,6 +37,25 @@ export async function createRun(
   return data as AutomationRun;
 }
 
+export async function getRunById(
+  supabase: SupabaseClient,
+  userId: string,
+  runId: string
+): Promise<AutomationRun | null> {
+  const { data, error } = await supabase
+    .from("automation_runs")
+    .select("*")
+    .eq("id", runId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null; // Not found
+    throw error;
+  }
+  return data as AutomationRun;
+}
+
 export async function completeRun(
   supabase: SupabaseClient,
   runId: string,
