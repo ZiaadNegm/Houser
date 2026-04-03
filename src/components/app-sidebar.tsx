@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/runs", label: "Runs" },
+  { href: "/preferences", label: "Preferences" },
 ];
 
 export function AppSidebar({ userEmail }: { userEmail: string }) {
