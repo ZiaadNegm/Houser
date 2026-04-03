@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getRecentRuns } from "@/lib/repositories/runs";
 import { Badge } from "@/components/ui/badge";
@@ -9,24 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function formatDuration(startedAt: string, completedAt: string | null): string {
-  if (!completedAt) return "—";
-  const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime();
-  const seconds = Math.round(ms / 1000);
-  return `${seconds}s`;
-}
-
-function statusVariant(status: string) {
-  switch (status) {
-    case "success":
-      return "default" as const;
-    case "failed":
-      return "destructive" as const;
-    default:
-      return "secondary" as const;
-  }
-}
+import { formatRunDate, formatDuration } from "@/lib/utils";
+import { statusVariant } from "@/lib/domain/types";
 
 export default async function RunsPage() {
   const supabase = await createClient();
@@ -62,22 +47,27 @@ export default async function RunsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {runs.map((run) => (
-              <TableRow key={run.id}>
-                <TableCell className="text-sm">
-                  {new Date(run.started_at).toLocaleString()}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
-                </TableCell>
-                <TableCell className="text-sm">{run.trigger_type}</TableCell>
-                <TableCell className="text-sm">{run.listings_found}</TableCell>
-                <TableCell className="text-sm">{run.actions_taken}</TableCell>
-                <TableCell className="text-sm">
-                  {formatDuration(run.started_at, run.completed_at)}
-                </TableCell>
-              </TableRow>
-            ))}
+            {runs.map((run) => {
+              const { day, date, time } = formatRunDate(run.started_at);
+              return (
+                <TableRow key={run.id} className="cursor-pointer">
+                  <TableCell className="text-sm">
+                    <Link href={`/runs/${run.id}`} className="hover:underline">
+                      {day} {date}, {time}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{run.trigger_type === "cron" ? "Auto" : "Manual"}</TableCell>
+                  <TableCell className="text-sm">{run.listings_found}</TableCell>
+                  <TableCell className="text-sm">{run.actions_taken}</TableCell>
+                  <TableCell className="text-sm">
+                    {formatDuration(run.started_at, run.completed_at)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
