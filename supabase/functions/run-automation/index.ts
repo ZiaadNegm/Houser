@@ -3,7 +3,7 @@ import { login } from "../_shared/woningnet/auth.ts";
 import { fetchListings } from "../_shared/woningnet/listings.ts";
 import { resolveUserId, checkOverlap } from "./auth_helpers.ts";
 
-type StepLog = { step: string; status: string; error?: string; ts: string };
+type StepLog = { step: string; status: string; error?: string; ts: string; detail?: Record<string, unknown> };
 
 function sanitizeError(message: string, secrets: string[]): string {
   let safe = message;
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
       currentStep = "fetch_listings";
       const { result } = await fetchListings(session);
-      steps.push({ step: "fetch_listings", status: "success", ts: new Date().toISOString() });
+      steps.push({ step: "fetch_listings", status: "success", ts: new Date().toISOString(), detail: { listings_fetched: result.rawCount } });
 
       // Success — persist results
       const { data: completedRun, error: updateError } = await supabase
