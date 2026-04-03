@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatRunDate, formatDuration } from "@/lib/utils";
-import type { StepLogEntry, Listing } from "@/lib/domain/types";
+import type { StepLogEntry, WoningNetListing } from "@/lib/domain/types";
 import { STEP_LABELS, statusVariant } from "@/lib/domain/types";
 
 function StepTimeline({ steps, runStartedAt }: { steps: StepLogEntry[]; runStartedAt: string }) {
@@ -86,8 +86,8 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
   const { day, date, time } = formatRunDate(run.started_at);
   const duration = formatDuration(run.started_at, run.completed_at);
   const steps = (run.step_log ?? []) as StepLogEntry[];
-  const listings: Listing[] = run.result_data
-    ? (run.result_data as unknown as Listing[]).sort((a, b) => a.position - b.position)
+  const listings: WoningNetListing[] = run.result_data
+    ? (run.result_data as unknown as WoningNetListing[]).sort((a, b) => a.position - b.position)
     : [];
 
   return (

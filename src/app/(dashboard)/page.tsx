@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TriggerRunButton } from "@/components/trigger-run-button";
 import { AutomationToggle } from "@/components/automation-toggle";
 import { formatRunDate, formatDuration, formatRelativeTime } from "@/lib/utils";
-import type { AutomationRun, Listing } from "@/lib/domain/types";
+import type { AutomationRun, WoningNetListing } from "@/lib/domain/types";
 import { STEP_LABELS } from "@/lib/domain/types";
 
 function analyzeFailures(runs: AutomationRun[]) {
@@ -78,8 +78,8 @@ export default async function DashboardPage() {
   const hasAttention = lastRunFailed || failurePattern || stuckRun || loadError;
 
   const latestSuccessful = runs.find((r) => r.status === "success" && r.result_data);
-  const listings: Listing[] = latestSuccessful?.result_data
-    ? (latestSuccessful.result_data as unknown as Listing[]).sort((a, b) => a.position - b.position)
+  const listings: WoningNetListing[] = latestSuccessful?.result_data
+    ? [...latestSuccessful.result_data].sort((a, b) => a.position - b.position)
     : [];
 
   return (
