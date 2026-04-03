@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TriggerRunButton } from "@/components/trigger-run-button";
+import { AutomationToggle } from "@/components/automation-toggle";
 
 interface Listing {
   id: string;
@@ -18,6 +19,14 @@ interface Listing {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("automation_enabled")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
 
   let runs: Awaited<ReturnType<typeof getRecentRuns>> = [];
   if (user) {
@@ -42,7 +51,10 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <TriggerRunButton />
+        <div className="flex items-center gap-3">
+          <AutomationToggle initialEnabled={profile?.automation_enabled ?? false} />
+          <TriggerRunButton />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
