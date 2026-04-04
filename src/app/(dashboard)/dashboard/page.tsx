@@ -119,6 +119,7 @@ export default async function DashboardPage() {
                     <Link
                       key={run.id}
                       href={`/runs/${run.id}`}
+                      prefetch={false}
                       className="flex items-start gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted/50 transition-colors"
                     >
                       <span className="w-10 shrink-0 text-muted-foreground text-xs pt-0.5">{time}</span>
