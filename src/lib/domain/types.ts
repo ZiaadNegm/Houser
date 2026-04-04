@@ -86,12 +86,16 @@ export function listingUrl(listingId: string): string {
 export function statusVariant(status: string) {
   switch (status) {
     case "success":
-      return "default" as const;
+      return "success" as const;
     case "failed":
       return "destructive" as const;
     default:
       return "secondary" as const;
   }
+}
+
+export function capitalizeStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export interface UserPreferences {

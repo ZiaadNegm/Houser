@@ -1,16 +1,16 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { AlertTriangle } from "lucide-react";
 
 export function CredentialsBanner() {
   return (
-    <Card className="border-yellow-500/50 bg-yellow-500/5">
-      <CardContent className="py-3 text-sm">
-        WoningNet credentials not configured. Automation runs will fail until you{" "}
-        <Link href="/settings" className="font-medium underline underline-offset-2 hover:text-foreground">
-          enter your login details in Settings
+    <div className="flex items-center gap-2 rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        WoningNet credentials not configured.{" "}
+        <Link href="/settings" className="font-medium underline underline-offset-2 hover:text-amber-950">
+          Set up in Settings
         </Link>
-        .
-      </CardContent>
-    </Card>
+      </span>
+    </div>
   );
 }
