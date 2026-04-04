@@ -27,7 +27,9 @@ export function AppSidebar({ userEmail }: { userEmail: string }) {
   return (
     <aside className="flex w-56 flex-col border-r bg-sidebar text-sidebar-foreground">
       <div className="p-4">
-        <h2 className="text-lg font-semibold">WoningNet DAK</h2>
+        <a href="https://almere.mijndak.nl" target="_blank" rel="noopener noreferrer" className="text-lg font-semibold hover:underline underline-offset-2">
+          WoningNet DAK
+        </a>
       </div>
       <Separator />
       <nav className="flex-1 p-2">

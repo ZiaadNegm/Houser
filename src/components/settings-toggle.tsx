@@ -4,14 +4,22 @@ import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-export function AutomationToggle({ initialEnabled }: { initialEnabled: boolean }) {
+export function SettingsToggle({
+  endpoint,
+  label,
+  initialEnabled,
+}: {
+  endpoint: string;
+  label: string;
+  initialEnabled: boolean;
+}) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [loading, setLoading] = useState(false);
 
   async function handleToggle(newValue: boolean) {
     setLoading(true);
     try {
-      const res = await fetch("/api/toggle-automation", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: newValue }),
@@ -36,7 +44,7 @@ export function AutomationToggle({ initialEnabled }: { initialEnabled: boolean }
         onCheckedChange={handleToggle}
         disabled={loading}
       />
-      <Label className="text-sm text-muted-foreground">Auto</Label>
+      <Label className="text-sm text-muted-foreground">{label}</Label>
     </div>
   );
 }

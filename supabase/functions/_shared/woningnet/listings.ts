@@ -305,6 +305,7 @@ export function parseListings(rawList: any[]): WoningNetListing[] {
     canRevoke: item.IsIntrekkenReactieToegestaan === true,
     totalApplicants: parseInt(item.AantalReactiesOpPublicatie, 10) || 0,
     owner: item.Eenheid?.Eigenaar ?? "",
+    imageUrl: item.Foto_Locatie ?? "",
   }));
 }
 

@@ -1,6 +1,14 @@
 export type RunStatus = "queued" | "running" | "success" | "failed";
 export type TriggerType = "manual" | "cron";
 
+export interface ActionRecord {
+  listing_id: string;
+  address: string;
+  action: string;
+  status: string;
+  error?: string;
+}
+
 export interface StepLogEntry {
   step: string;
   status: "success" | "failed" | "skipped";
@@ -9,7 +17,12 @@ export interface StepLogEntry {
   detail?: {
     listings_fetched?: number;
     listings_scored?: { id: string; address: string; score: number; reason: string }[];
-    listings_applied?: { id: string; address: string; result: string; reason: string }[];
+    actions?: ActionRecord[];
+    to_apply?: number;
+    to_revoke?: number;
+    to_replace?: number;
+    dry_run?: boolean;
+    verify_discrepancies?: number;
   };
 }
 
@@ -23,7 +36,7 @@ export interface AutomationRun {
   listings_found: number;
   actions_taken: number;
   error_message: string | null;
-  result_data: WoningNetListing[] | null;
+  result_data: ListingWithScore[] | null;
   step_log: StepLogEntry[] | null;
   created_at: string;
 }
@@ -45,15 +58,30 @@ export interface WoningNetListing {
   canRevoke: boolean;
   totalApplicants: number;
   owner: string;
+  imageUrl: string;
+}
+
+export function listingImageUrl(rawUrl: string, width = 400, height = 300): string {
+  if (!rawUrl) return "";
+  return rawUrl.replace("/upload/", `/upload/q_auto/f_auto/c_fill,w_${width},h_${height}/`);
 }
 
 export const STEP_LABELS: Record<string, string> = {
   credentials_check: "Credentials check",
   login: "Login",
   fetch_listings: "Fetch listings",
+  load_settings: "Load settings",
   score_listings: "Score listings",
-  apply: "Apply",
+  decide: "Decide actions",
+  execute: "Execute actions",
+  verify: "Verify results",
 };
+
+const WONINGNET_BASE = "https://almere.mijndak.nl";
+
+export function listingUrl(listingId: string): string {
+  return `${WONINGNET_BASE}/HuisDetails?PublicatieId=${listingId}`;
+}
 
 export function statusVariant(status: string) {
   switch (status) {
@@ -87,4 +115,15 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 export interface ScoredListing extends WoningNetListing {
   score: number;
   matchReasons: string[];
+}
+
+/** Listing with optional scoring fields — used when result_data may or may not have scores. */
+export type ListingWithScore = WoningNetListing & { score?: number; matchReasons?: string[] };
+
+/** Sort by score descending (if available), otherwise by position ascending. */
+export function sortListings(listings: ListingWithScore[]): ListingWithScore[] {
+  return [...listings].sort((a, b) => {
+    if (a.score != null && b.score != null) return b.score - a.score;
+    return a.position - b.position;
+  });
 }

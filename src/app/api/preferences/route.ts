@@ -1,31 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { withAuth } from "@/lib/supabase/with-auth";
 import { getPreferences, savePreferences } from "@/lib/repositories/settings";
 import type { UserPreferences } from "@/lib/domain/types";
 
-export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async ({ supabase, user }) => {
   const preferences = await getPreferences(supabase, user.id);
   return NextResponse.json(preferences);
-}
+});
 
-export async function POST(req: Request) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async ({ supabase, user }, req) => {
   const raw = await req.json();
 
-  // Sanitize: only keep known fields with correct types
   const body: UserPreferences = {
     maxRent: typeof raw.maxRent === "number" ? raw.maxRent : null,
     minRooms: typeof raw.minRooms === "number" ? raw.minRooms : null,
@@ -46,4 +31,4 @@ export async function POST(req: Request) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

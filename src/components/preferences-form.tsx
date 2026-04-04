@@ -15,6 +15,7 @@ export function PreferencesForm({
   const [prefs, setPrefs] = useState(initialPreferences);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function updateField<K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) {
     setPrefs((prev) => ({ ...prev, [key]: value }));
@@ -24,6 +25,7 @@ export function PreferencesForm({
   async function handleSave() {
     setSaving(true);
     setSaved(false);
+    setError(null);
     try {
       const res = await fetch("/api/preferences", {
         method: "POST",
@@ -33,7 +35,7 @@ export function PreferencesForm({
       if (!res.ok) throw new Error("Failed to save");
       setSaved(true);
     } catch {
-      alert("Failed to save preferences. Please try again.");
+      setError("Failed to save preferences. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -135,6 +137,7 @@ export function PreferencesForm({
           </div>
         </div>
 
+        {error && <p className="text-sm text-destructive">{error}</p>}
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={saving}>
             {saving ? "Saving..." : "Save Preferences"}
