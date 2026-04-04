@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CheckCircle } from "lucide-react";
 
 export function CredentialsForm({
   initialStatus,
@@ -48,7 +49,8 @@ export function CredentialsForm({
         <div className="flex items-center gap-3">
           <CardTitle>WoningNet Credentials</CardTitle>
           {(saved || initialStatus.configured) && (
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="success" className="text-xs">
+              <CheckCircle className="h-3 w-3 mr-1" />
               Configured
             </Badge>
           )}

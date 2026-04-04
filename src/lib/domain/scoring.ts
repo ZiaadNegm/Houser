@@ -1,4 +1,8 @@
 import type { WoningNetListing, UserPreferences, ScoredListing } from "./types";
+import { filterBlacklisted, type BlacklistConfig } from "./blacklist-filter";
+
+export type { BlacklistConfig } from "./blacklist-filter";
+export { filterBlacklisted } from "./blacklist-filter";
 
 // --- Helpers ---
 
@@ -183,15 +187,6 @@ const rules: ScoringRule[] = [
 
 // --- Public API ---
 
-export function filterBlacklisted(
-  listings: WoningNetListing[],
-  blacklistIds: string[]
-): WoningNetListing[] {
-  if (blacklistIds.length === 0) return listings;
-  const set = new Set(blacklistIds);
-  return listings.filter((l) => !set.has(l.id));
-}
-
 export function scoreListings(
   listings: WoningNetListing[],
   preferences: UserPreferences
@@ -218,8 +213,8 @@ export function scoreListings(
 export function scoreAndRank(
   listings: WoningNetListing[],
   preferences: UserPreferences,
-  blacklist: string[]
+  blacklist: BlacklistConfig
 ): ScoredListing[] {
-  const filtered = filterBlacklisted(listings, blacklist);
+  const { filtered } = filterBlacklisted(listings, blacklist);
   return scoreListings(filtered, preferences);
 }

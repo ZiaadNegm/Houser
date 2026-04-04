@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { RegisterForm } from "@/components/register-form";
+import { LandingPage } from "@/components/landing-page";
 
-export default async function RegisterPage() {
+export default async function MarketingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -10,9 +10,5 @@ export default async function RegisterPage() {
     redirect("/dashboard");
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <RegisterForm />
-    </div>
-  );
+  return <LandingPage />;
 }

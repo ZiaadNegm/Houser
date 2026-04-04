@@ -2,7 +2,8 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 import { login } from "../_shared/woningnet/auth.ts";
 import { fetchListings } from "../_shared/woningnet/listings.ts";
 import { applyToListing, revokeApplication } from "../_shared/woningnet/actions.ts";
-import { scoreAndRank } from "../_shared/scoring.ts";
+import { scoreListings } from "../_shared/scoring.ts";
+import { filterBlacklisted, type BlacklistConfig } from "../_shared/blacklist_filter.ts";
 import { computeActionPlan, MAX_SLOTS } from "../_shared/decision.ts";
 import { DEFAULT_PREFERENCES } from "../_shared/domain_types.ts";
 import type { UserPreferences, ScoredListing } from "../_shared/domain_types.ts";
@@ -29,7 +30,7 @@ interface RunContext {
   scored?: ScoredListing[];
   plan?: ReturnType<typeof computeActionPlan>;
   preferences: UserPreferences;
-  blacklist: string[];
+  blacklist: BlacklistConfig;
   dryRun: boolean;
   actionsCount: number;
   actionRecords: ActionRecord[];
@@ -92,26 +93,45 @@ async function stepLoadSettings(ctx: RunContext): Promise<RunContext> {
     .from("app_settings")
     .select("key, value")
     .eq("user_id", ctx.userId)
-    .in("key", ["preferences", "blacklist", "dry_run"]);
+    .in("key", ["preferences", "dry_run"]);
 
   const rows = data ?? [];
   const prefsRow = rows.find((r: { key: string }) => r.key === "preferences");
-  const blacklistRow = rows.find((r: { key: string }) => r.key === "blacklist");
   const dryRunRow = rows.find((r: { key: string }) => r.key === "dry_run");
 
   const preferences: UserPreferences = prefsRow?.value
     ? { ...DEFAULT_PREFERENCES, ...(prefsRow.value as Partial<UserPreferences>) }
     : { ...DEFAULT_PREFERENCES };
 
-  const blacklist: string[] = Array.isArray(blacklistRow?.value) ? blacklistRow.value : [];
   const dryRun: boolean = dryRunRow?.value === false ? false : true; // default ON
+
+  // Load blacklist from dedicated table — failure aborts the run (safety guardrail)
+  const { data: blEntries, error: blError } = await ctx.supabase
+    .from("blacklist_entries")
+    .select("type, value")
+    .eq("user_id", ctx.userId);
+
+  if (blError) throw new Error("Blacklist fetch failed — aborting run (safety guardrail)");
+
+  const blacklist: BlacklistConfig = {
+    ids: (blEntries ?? []).filter((e: { type: string }) => e.type === "id").map((e: { value: string }) => e.value),
+    streets: (blEntries ?? []).filter((e: { type: string }) => e.type === "street").map((e: { value: string }) => e.value),
+  };
 
   return { ...ctx, preferences, blacklist, dryRun };
 }
 
 async function stepScore(ctx: RunContext): Promise<RunContext> {
-  const scored = scoreAndRank(ctx.listings!, ctx.preferences, ctx.blacklist);
-  return { ...ctx, scored };
+  const { filtered, removed } = filterBlacklisted(ctx.listings!, ctx.blacklist);
+  const scored = scoreListings(filtered, ctx.preferences);
+
+  if (removed.length > 0) {
+    console.log(
+      `[pipeline:score] Blacklist filtered ${removed.length} listing(s): ${removed.map((r) => `${r.address} (${r.matchedBy}=${r.matchedValue})`).join(", ")}`,
+    );
+  }
+
+  return { ...ctx, scored, _blacklistRemoved: removed } as RunContext & { _blacklistRemoved: typeof removed };
 }
 
 async function stepDecide(ctx: RunContext): Promise<RunContext> {
@@ -204,7 +224,8 @@ async function stepVerify(ctx: RunContext): Promise<RunContext> {
   try {
     const { result, session } = await fetchListings(ctx.session!);
     // Re-score the verified listings
-    const verified = scoreAndRank(result.listings, ctx.preferences, ctx.blacklist);
+    const { filtered: verifiedFiltered } = filterBlacklisted(result.listings, ctx.blacklist);
+    const verified = scoreListings(verifiedFiltered, ctx.preferences);
     return { ...ctx, session, scored: verified, listings: result.listings };
   } catch (err) {
     console.warn(`[pipeline:verify] re-fetch failed, using pre-action data: ${err}`);
@@ -244,6 +265,7 @@ const pipeline: PipelineStep[] = [
         id: s.id, address: s.address, score: s.score,
         reason: s.matchReasons.join("; "),
       })),
+      blacklist_filtered: (ctx as RunContext & { _blacklistRemoved?: unknown[] })._blacklistRemoved ?? [],
     }),
   },
   {
@@ -357,7 +379,7 @@ Deno.serve(async (req) => {
       userId: user_id,
       runId: run.id,
       preferences: { ...DEFAULT_PREFERENCES },
-      blacklist: [],
+      blacklist: { ids: [], streets: [] },
       dryRun: true, // safe default, overridden by loadSettings
       actionsCount: 0,
       actionRecords: [],

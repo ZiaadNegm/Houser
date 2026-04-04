@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AutomationRun, RunStatus, TriggerType } from "@/lib/domain/types";
+import type { AutomationRun } from "@/lib/domain/types";
 
 export async function getRecentRuns(
   supabase: SupabaseClient,
@@ -17,25 +17,6 @@ export async function getRecentRuns(
   return data as AutomationRun[];
 }
 
-export async function createRun(
-  supabase: SupabaseClient,
-  userId: string,
-  triggerType: TriggerType
-): Promise<AutomationRun> {
-  const { data, error } = await supabase
-    .from("automation_runs")
-    .insert({
-      user_id: userId,
-      status: "running" as RunStatus,
-      trigger_type: triggerType,
-      started_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data as AutomationRun;
-}
 
 export async function getRunById(
   supabase: SupabaseClient,
@@ -56,23 +37,14 @@ export async function getRunById(
   return data as AutomationRun;
 }
 
-export async function completeRun(
+export async function getTotalRunCount(
   supabase: SupabaseClient,
-  runId: string,
-  status: "success" | "failed",
-  result?: { listings_found?: number; actions_taken?: number; error_message?: string }
-): Promise<AutomationRun> {
-  const { data, error } = await supabase
+  userId: string,
+): Promise<number> {
+  const { count, error } = await supabase
     .from("automation_runs")
-    .update({
-      status,
-      completed_at: new Date().toISOString(),
-      ...result,
-    })
-    .eq("id", runId)
-    .select()
-    .single();
-
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
   if (error) throw error;
-  return data as AutomationRun;
+  return count ?? 0;
 }

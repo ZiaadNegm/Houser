@@ -1,56 +1,70 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function getBlacklist(
+export type BlacklistEntryType = "id" | "street";
+
+export interface BlacklistEntry {
+  id: string;
+  user_id: string;
+  type: BlacklistEntryType;
+  value: string;
+  label: string;
+  created_at: string;
+}
+
+const MAX_ENTRIES = 50;
+
+export async function getBlacklistEntries(
   supabase: SupabaseClient,
   userId: string
-): Promise<string[]> {
+): Promise<BlacklistEntry[]> {
   const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
+    .from("blacklist_entries")
+    .select("*")
     .eq("user_id", userId)
-    .eq("key", "blacklist")
-    .single();
-
-  if (error || !data) return [];
-  return Array.isArray(data.value) ? data.value : [];
-}
-
-async function upsertBlacklist(
-  supabase: SupabaseClient,
-  userId: string,
-  ids: string[]
-): Promise<string[]> {
-  const { error } = await supabase
-    .from("app_settings")
-    .upsert(
-      {
-        user_id: userId,
-        key: "blacklist",
-        value: ids,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,key" }
-    );
+    .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return ids;
+  return data ?? [];
 }
 
-export async function addToBlacklist(
+export async function addBlacklistEntry(
   supabase: SupabaseClient,
   userId: string,
-  listingId: string
-): Promise<string[]> {
-  const current = await getBlacklist(supabase, userId);
-  if (current.includes(listingId)) return current;
-  return upsertBlacklist(supabase, userId, [...current, listingId]);
+  type: BlacklistEntryType,
+  value: string,
+  label: string
+): Promise<BlacklistEntry> {
+  // Check entry limit
+  const { count, error: countError } = await supabase
+    .from("blacklist_entries")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (countError) throw countError;
+  if ((count ?? 0) >= MAX_ENTRIES) {
+    throw new Error(`Blacklist limit reached (${MAX_ENTRIES} entries)`);
+  }
+
+  const { data, error } = await supabase
+    .from("blacklist_entries")
+    .insert({ user_id: userId, type, value, label })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
-export async function removeFromBlacklist(
+export async function removeBlacklistEntry(
   supabase: SupabaseClient,
   userId: string,
-  listingId: string
-): Promise<string[]> {
-  const current = await getBlacklist(supabase, userId);
-  return upsertBlacklist(supabase, userId, current.filter((id) => id !== listingId));
+  entryId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("blacklist_entries")
+    .delete()
+    .eq("id", entryId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
 }

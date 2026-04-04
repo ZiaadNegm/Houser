@@ -3,7 +3,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import type { AutomationRun } from "@/lib/domain/types";
 import { STEP_LABELS } from "@/lib/domain/types";
 
-export function analyzeFailures(runs: AutomationRun[]) {
+function analyzeFailures(runs: AutomationRun[]) {
   const lastRun = runs[0];
   const lastFive = runs.slice(0, 5);
   const failedInLastFive = lastFive.filter((r) => r.status === "failed");

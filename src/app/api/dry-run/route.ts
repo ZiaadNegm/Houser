@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/supabase/with-auth";
 
 export const GET = withAuth(async ({ supabase, user }) => {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("app_settings")
     .select("value")
     .eq("user_id", user.id)
     .eq("key", "dry_run")
     .single();
+
+  if (error) {
+    console.error(`[dry-run/GET] user=${user.id} query failed: ${error.message}`);
+  }
 
   const enabled = data?.value === false ? false : true;
   return NextResponse.json({ enabled });
@@ -32,7 +36,8 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
     );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`[dry-run/POST] user=${user.id} upsert failed: ${error.message}`);
+    return NextResponse.json({ error: "Failed to update dry run setting" }, { status: 500 });
   }
 
   return NextResponse.json({ enabled: body.enabled });

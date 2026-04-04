@@ -7,9 +7,19 @@ const IV_BYTES = 12;
 function getKeyBytes(): Uint8Array {
   const raw = process.env.CREDENTIAL_ENCRYPTION_KEY;
   if (!raw) {
-    throw new Error("CREDENTIAL_ENCRYPTION_KEY environment variable is not set");
+    throw new Error(
+      "CREDENTIAL_ENCRYPTION_KEY environment variable is not set. " +
+      "Generate one with: openssl rand -base64 32"
+    );
   }
-  return new Uint8Array(Buffer.from(raw, "base64"));
+  const bytes = new Uint8Array(Buffer.from(raw, "base64"));
+  if (bytes.length !== 32) {
+    throw new Error(
+      `CREDENTIAL_ENCRYPTION_KEY must be 32 bytes (got ${bytes.length}). ` +
+      "Generate with: openssl rand -base64 32"
+    );
+  }
+  return bytes;
 }
 
 export async function encryptCredential(plaintext: string): Promise<string> {

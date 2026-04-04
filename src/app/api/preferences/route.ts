@@ -28,7 +28,8 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
     await savePreferences(supabase, user.id, body);
     return NextResponse.json(body);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const { logApiError } = await import("@/lib/api-logger");
+    logApiError("preferences/POST", user.id, err);
+    return NextResponse.json({ error: "Failed to save preferences" }, { status: 500 });
   }
 });
