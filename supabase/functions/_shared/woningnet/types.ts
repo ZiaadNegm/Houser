@@ -25,6 +25,7 @@ export interface WoningNetListing {
   canRevoke: boolean; // IsIntrekkenReactieToegestaan — needed for Phase 2 revoke
   totalApplicants: number; // parseInt(AantalReactiesOpPublicatie)
   owner: string; // Eenheid.Eigenaar (housing corporation)
+  imageUrl: string; // Foto_Locatie — full Cloudinary URL for listing photo
 }
 
 // Result of a single fetch-and-parse operation.

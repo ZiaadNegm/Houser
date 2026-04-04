@@ -1,4 +1,8 @@
-import type { WoningNetListing, UserPreferences, ScoredListing } from "./types";
+// SYNC: keep in sync with src/lib/domain/scoring.ts
+// Copied here because Deno edge functions can't import from the Next.js src/ tree.
+
+import type { WoningNetListing } from "./woningnet/types.ts";
+import type { UserPreferences, ScoredListing } from "./domain_types.ts";
 
 // --- Helpers ---
 
@@ -23,9 +27,7 @@ interface BaseRule {
 
 interface GradientRule extends BaseRule {
   type: "gradient";
-  /** Extract numeric value from listing (lower = better) */
   getValue: (l: WoningNetListing) => number;
-  /** Max value that scores 100. Values above score 0. */
   max: number;
   format: (value: number) => string;
 }
@@ -185,7 +187,7 @@ const rules: ScoringRule[] = [
 
 export function filterBlacklisted(
   listings: WoningNetListing[],
-  blacklistIds: string[]
+  blacklistIds: string[],
 ): WoningNetListing[] {
   if (blacklistIds.length === 0) return listings;
   const set = new Set(blacklistIds);
@@ -194,7 +196,7 @@ export function filterBlacklisted(
 
 export function scoreListings(
   listings: WoningNetListing[],
-  preferences: UserPreferences
+  preferences: UserPreferences,
 ): ScoredListing[] {
   const totalWeight = rules.reduce((sum, r) => sum + r.weight, 0);
 
@@ -218,7 +220,7 @@ export function scoreListings(
 export function scoreAndRank(
   listings: WoningNetListing[],
   preferences: UserPreferences,
-  blacklist: string[]
+  blacklist: string[],
 ): ScoredListing[] {
   const filtered = filterBlacklisted(listings, blacklist);
   return scoreListings(filtered, preferences);

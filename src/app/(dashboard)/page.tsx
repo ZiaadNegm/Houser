@@ -3,53 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getRecentRuns } from "@/lib/repositories/runs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TriggerRunButton } from "@/components/trigger-run-button";
-import { AutomationToggle } from "@/components/automation-toggle";
-import { formatRunDate, formatDuration, formatRelativeTime } from "@/lib/utils";
-import type { AutomationRun, WoningNetListing } from "@/lib/domain/types";
-import { STEP_LABELS } from "@/lib/domain/types";
-
-function analyzeFailures(runs: AutomationRun[]) {
-  const lastRun = runs[0];
-  const lastFive = runs.slice(0, 5);
-  const failedInLastFive = lastFive.filter((r) => r.status === "failed");
-
-  const lastRunFailed = lastRun?.status === "failed" ? lastRun : null;
-
-  const failurePattern =
-    failedInLastFive.length > 1
-      ? {
-          count: failedInLastFive.length,
-          total: lastFive.length,
-          errors: [...new Set(failedInLastFive.map((r) => r.error_message).filter(Boolean))],
-        }
-      : null;
-
-  const stuckRun = runs.find((r) => {
-    if (r.status !== "running" && r.status !== "queued") return false;
-    const elapsed = Date.now() - new Date(r.started_at).getTime();
-    return elapsed > 10 * 60 * 1000; // 10 minutes
-  });
-
-  return { lastRunFailed, failurePattern, stuckRun };
-}
-
-function getFailedStep(run: AutomationRun): string | null {
-  if (!run.step_log) return null;
-  const failed = run.step_log.find((s) => s.status === "failed");
-  return failed?.step ?? null;
-}
-
-function statusDot(status: string) {
-  const color =
-    status === "success"
-      ? "bg-green-500"
-      : status === "failed"
-        ? "bg-red-500"
-        : "bg-yellow-500";
-  return <span className={`inline-block h-2 w-2 rounded-full ${color}`} />;
-}
+import { SettingsToggle } from "@/components/settings-toggle";
+import { ListingsTable } from "@/components/listings-table";
+import { StatusDot } from "@/components/status-dot";
+import { AttentionCards } from "@/components/attention-cards";
+import { formatRunDate, formatDuration } from "@/lib/utils";
+import type { AutomationRun } from "@/lib/domain/types";
+import { sortListings } from "@/lib/domain/types";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -65,21 +26,26 @@ export default async function DashboardPage() {
 
   let runs: AutomationRun[] = [];
   let loadError = false;
+  let dryRunEnabled = true;
   if (user) {
     try {
       runs = await getRecentRuns(supabase, user.id, 10);
     } catch {
       loadError = true;
     }
+    const { data: dryRunSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("user_id", user.id)
+      .eq("key", "dry_run")
+      .single();
+    dryRunEnabled = dryRunSetting?.value === false ? false : true;
   }
 
   const recentRuns = runs.slice(0, 7);
-  const { lastRunFailed, failurePattern, stuckRun } = analyzeFailures(runs);
-  const hasAttention = lastRunFailed || failurePattern || stuckRun || loadError;
-
   const latestSuccessful = runs.find((r) => r.status === "success" && r.result_data);
-  const listings: WoningNetListing[] = latestSuccessful?.result_data
-    ? [...latestSuccessful.result_data].sort((a, b) => a.position - b.position)
+  const listings = latestSuccessful?.result_data
+    ? sortListings(latestSuccessful.result_data)
     : [];
 
   return (
@@ -87,67 +53,14 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <div className="flex items-center gap-3">
-          <AutomationToggle initialEnabled={profile?.automation_enabled ?? false} />
+          <SettingsToggle endpoint="/api/dry-run" label="Dry run" initialEnabled={dryRunEnabled} />
+          <SettingsToggle endpoint="/api/toggle-automation" label="Auto" initialEnabled={profile?.automation_enabled ?? false} />
           <TriggerRunButton />
         </div>
       </div>
 
-      {/* Attention Needed */}
-      {hasAttention && (
-        <div className="space-y-3">
-          {loadError && (
-            <Card className="border-destructive/50 bg-red-50 dark:bg-red-950/20">
-              <CardContent className="pt-6">
-                <p className="text-sm font-medium text-destructive">
-                  Could not load recent runs. The database may be unreachable.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+      <AttentionCards loadError={loadError} runs={runs} />
 
-          {stuckRun && (
-            <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-              <CardContent className="pt-6">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  Run started {formatRelativeTime(stuckRun.started_at)} and hasn&apos;t completed
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {lastRunFailed && (() => {
-            const failedStep = getFailedStep(lastRunFailed);
-            return (
-              <Card className="border-destructive/50 bg-red-50 dark:bg-red-950/20">
-                <CardContent className="pt-6">
-                  <p className="text-sm font-medium text-destructive">
-                    {failedStep
-                      ? `${STEP_LABELS[failedStep] ?? failedStep} failed`
-                      : "Last run failed"}{" "}
-                    {formatRelativeTime(lastRunFailed.started_at)}
-                    {lastRunFailed.error_message && `: ${lastRunFailed.error_message}`}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })()}
-
-          {failurePattern && !lastRunFailed && (
-            <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-              <CardContent className="pt-6 space-y-1">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  {failurePattern.count} of last {failurePattern.total} runs failed
-                </p>
-                {failurePattern.errors.map((err, i) => (
-                  <p key={i} className="text-xs text-amber-600 dark:text-amber-500">{err}</p>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Recent Activity */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Recent Activity</CardTitle>
@@ -167,7 +80,7 @@ export default async function DashboardPage() {
                     href={`/runs/${run.id}`}
                     className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 transition-colors"
                   >
-                    {statusDot(run.status)}
+                    <StatusDot status={run.status} />
                     <span className="w-28 shrink-0 text-muted-foreground">
                       {day} {date}
                     </span>
@@ -176,7 +89,9 @@ export default async function DashboardPage() {
                       {run.trigger_type === "cron" ? "Auto" : "Manual"}
                     </Badge>
                     <span className="text-muted-foreground">
-                      {run.status === "success" ? `${run.listings_found} listings` : "—"}
+                      {run.status === "success"
+                        ? `${run.listings_found} listings${run.actions_taken > 0 ? `, ${run.actions_taken} actions` : ""}`
+                        : "—"}
                     </span>
                     <span className="ml-auto text-muted-foreground">
                       {formatDuration(run.started_at, run.completed_at)}
@@ -194,47 +109,11 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Listings */}
-      {listings.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Available Listings</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {listings.length} listings from last successful run
-            </p>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Address</TableHead>
-                  <TableHead className="text-right">Position</TableHead>
-                  <TableHead className="text-right">Rooms</TableHead>
-                  <TableHead className="text-right">Rent</TableHead>
-                  <TableHead>Deadline</TableHead>
-                  <TableHead>Applied</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {listings.map((listing) => (
-                  <TableRow key={listing.id}>
-                    <TableCell className="font-medium">{listing.address}</TableCell>
-                    <TableCell className="text-right">{listing.position}</TableCell>
-                    <TableCell className="text-right">{listing.rooms}</TableCell>
-                    <TableCell className="text-right">{listing.rentNet}</TableCell>
-                    <TableCell>{listing.deadline}</TableCell>
-                    <TableCell>
-                      {listing.hasApplied && (
-                        <Badge variant="default">Applied</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <ListingsTable
+        listings={listings}
+        title="Available Listings"
+        subtitle={`${listings.length} listings from last successful run`}
+      />
     </div>
   );
 }
