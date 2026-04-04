@@ -24,13 +24,6 @@ export function formatDuration(startedAt: string, completedAt: string | null): s
   return `${seconds}s`;
 }
 
-export function formatDeadline(isoString: string): string {
-  const d = new Date(isoString);
-  if (isNaN(d.getTime())) return "—";
-  const day = d.getDate();
-  const month = d.toLocaleDateString("en-US", { month: "short", timeZone: TZ });
-  return `${day} ${month}`;
-}
 
 export function formatRelativeTime(isoString: string): string {
   const ms = Date.now() - new Date(isoString).getTime();
