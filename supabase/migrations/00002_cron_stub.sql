@@ -1,21 +1,2 @@
--- Phase A: Cron stub
--- One placeholder schedule for automation runs.
--- Cron is proven when it writes a run record indistinguishable
--- from a manual run except for trigger_type = 'cron'.
---
--- Uncomment and configure after deployment:
-
--- select cron.schedule(
---   'automation-run-midnight',
---   '0 23 * * *',  -- 23:00 UTC ≈ 00:00 CET
---   $$
---   select net.http_post(
---     url := 'https://<project-ref>.supabase.co/functions/v1/run-automation',
---     headers := jsonb_build_object(
---       'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key'),
---       'Content-Type', 'application/json'
---     ),
---     body := '{"trigger_type": "cron"}'::jsonb
---   );
---   $$
--- );
+-- Superseded by 00004_cron_fanout.sql which implements hourly fan-out scheduling.
+-- This file is kept empty to preserve migration ordering.
