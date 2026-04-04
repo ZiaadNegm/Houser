@@ -1,17 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { login } from "../_shared/woningnet/auth.ts";
 import { fetchListings } from "../_shared/woningnet/listings.ts";
+import { decryptCredential, sanitizeError } from "../_shared/crypto/credentials.ts";
 import { resolveUserId, checkOverlap } from "./auth_helpers.ts";
 
 type StepLog = { step: string; status: string; error?: string; ts: string };
-
-function sanitizeError(message: string, secrets: string[]): string {
-  let safe = message;
-  for (const secret of secrets) {
-    if (secret) safe = safe.replaceAll(secret, "[REDACTED]");
-  }
-  return safe;
-}
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -62,12 +55,18 @@ Deno.serve(async (req) => {
     if (insertError) throw insertError;
 
     const steps: StepLog[] = [];
-    const email = Deno.env.get("WONINGNET_EMAIL");
-    const password = Deno.env.get("WONINGNET_PASSWORD");
 
-    if (!email || !password) {
+    // Fetch and decrypt user's WoningNet credentials from DB
+    const { data: creds, error: credsError } = await supabase
+      .from("user_credentials")
+      .select("encrypted_credentials")
+      .eq("user_id", user_id)
+      .eq("provider", "woningnet")
+      .single();
+
+    if (credsError || !creds) {
       const msg = "WoningNet credentials not configured";
-      steps.push({ step: "credentials_check", status: "failed", error: msg, ts: new Date().toISOString() });
+      steps.push({ step: "credentials_fetch", status: "failed", error: msg, ts: new Date().toISOString() });
       await supabase
         .from("automation_runs")
         .update({
@@ -81,6 +80,29 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: msg }, 500);
     }
 
+    let email: string;
+    let password: string;
+    try {
+      const decrypted = JSON.parse(await decryptCredential(creds.encrypted_credentials));
+      email = decrypted.email;
+      password = decrypted.password;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Credential decryption failed";
+      steps.push({ step: "credentials_decrypt", status: "failed", error: msg, ts: new Date().toISOString() });
+      await supabase
+        .from("automation_runs")
+        .update({
+          status: "failed",
+          error_message: msg,
+          step_log: steps,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", run.id);
+
+      return jsonResponse({ error: msg }, 500);
+    }
+
+    steps.push({ step: "credentials_fetch", status: "success", ts: new Date().toISOString() });
     const secrets = [email, password];
     let currentStep = "login";
 
