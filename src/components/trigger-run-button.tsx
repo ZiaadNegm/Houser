@@ -30,7 +30,7 @@ export function TriggerRunButton() {
       }
       router.refresh();
     } catch (err) {
-      console.error("Trigger run failed:", err);
+      setMessage(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }

@@ -8,16 +8,19 @@ For the full product vision including scoring rules, apply/revoke logic, and fut
 
 ## What's currently implemented
 
-The project is in early MVP stage. The following is working end-to-end:
-
 - **App authentication** — sign up / sign in via Supabase Auth
-- **WoningNet integration** — session-based login and listing retrieval from the WoningNet DAK SOAP/XML API
-- **Listing display** — dashboard shows all available listings sorted by queue position, with address, rent, rooms, contract type, deadline, and applicant count
-- **Manual trigger** — click "Trigger Run" to fetch fresh listings on demand
-- **Run logging** — each run is persisted with status, result data (full listing JSON), and a step-by-step execution log for debugging
-- **Error handling** — failed runs show an error banner on the dashboard; credentials are sanitized from all stored data
-
-**Not yet implemented:** automated scheduling, scoring/ranking engine, auto-apply, revoke-and-replace, blacklist management, and metrics. See the [PRD](./productRequirements.md) for the full MVP scope.
+- **WoningNet integration** — session-based login, listing retrieval, apply, and revoke via the WoningNet DAK JSON API
+- **Scoring engine** — declarative rule-based scoring (position, rent, rooms, neighborhood, contract type, property type, position limit) with weighted aggregation
+- **Auto-apply** — applies to the top-scored listings that fit your preferences, manages 2 application slots
+- **Revoke-and-replace** — automatically revokes weaker applications when better listings appear
+- **Dry run mode** — preview what the system would do without making real applications (default ON)
+- **Blacklist** — exclude specific listings from consideration
+- **Preferences** — configure max rent, min rooms, preferred neighborhoods, contract type, property types, and position limit
+- **Scheduled runs** — hourly cron via Supabase pg_cron with user-bucketed fan-out
+- **Dashboard** — listings sorted by score with house photos for applied listings, recent activity with action counts, attention banners for failures
+- **Run detail** — step-by-step timeline (login, fetch, score, decide, execute, verify) with per-action results
+- **Run history** — expandable accordion view with inline listing previews
+- **Listing links** — every listing links to its WoningNet detail page
 
 ## Tech stack
 
@@ -127,17 +130,18 @@ src/
   app/              # Next.js pages and API routes
   components/       # React components (UI, forms, layout)
   lib/
-    supabase/       # Supabase client setup (browser, server, middleware)
+    supabase/       # Supabase client setup (browser, server, middleware, withAuth)
     repositories/   # Data access layer (runs, settings, blacklist)
-    domain/         # Business logic (scoring, decision-making)
-    woningnet/      # WoningNet HTTP client (mirrors Edge Function code)
+    domain/         # Business logic (scoring engine, types, helpers)
 
 supabase/
   migrations/       # SQL migrations (auto-applied on supabase start)
   functions/
-    run-automation/  # Main automation Edge Function
+    run-automation/  # Main automation Edge Function (pipeline: login → fetch → score → decide → execute → verify)
     _shared/
-      woningnet/    # Shared WoningNet modules (auth, client, listings, types)
+      woningnet/    # WoningNet modules (auth, client, listings, actions, types)
+      scoring.ts    # Scoring engine (synced copy from src/lib/domain/scoring.ts)
+      decision.ts   # Decision engine (slot management, revoke-and-replace)
   config.toml       # Supabase local dev configuration
 ```
 
