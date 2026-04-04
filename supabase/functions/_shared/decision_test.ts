@@ -19,6 +19,7 @@ function listing(overrides: Partial<ScoredListing> = {}): ScoredListing {
     canRevoke: true,
     totalApplicants: 100,
     owner: "TestCorp",
+    imageUrl: "",
     score: 50,
     matchReasons: [],
     ...overrides,

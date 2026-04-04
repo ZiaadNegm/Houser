@@ -7,6 +7,7 @@ import { computeActionPlan, MAX_SLOTS } from "../_shared/decision.ts";
 import { DEFAULT_PREFERENCES } from "../_shared/domain_types.ts";
 import type { UserPreferences, ScoredListing } from "../_shared/domain_types.ts";
 import type { WoningNetSession, WoningNetListing } from "../_shared/woningnet/types.ts";
+import { decryptCredential, sanitizeError } from "../_shared/crypto/credentials.ts";
 import { resolveUserId, checkOverlap } from "./auth_helpers.ts";
 
 // --- Types ---
@@ -46,25 +47,35 @@ interface ActionRecord {
 
 // --- Helpers ---
 
-function sanitizeError(message: string, secrets: string[]): string {
-  let safe = message;
-  for (const secret of secrets) {
-    if (secret) safe = safe.replaceAll(secret, "[REDACTED]");
-  }
-  return safe;
-}
-
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 // --- Pipeline steps ---
 
 async function stepLogin(ctx: RunContext): Promise<RunContext> {
-  const email = Deno.env.get("WONINGNET_EMAIL");
-  const password = Deno.env.get("WONINGNET_PASSWORD");
+  // Fetch and decrypt user's WoningNet credentials from DB
+  const { data: creds, error: credsError } = await ctx.supabase
+    .from("user_credentials")
+    .select("encrypted_credentials")
+    .eq("user_id", ctx.userId)
+    .eq("provider", "woningnet")
+    .single();
 
-  if (!email || !password) {
+  if (credsError || !creds) {
     throw new Error("WoningNet credentials not configured");
+  }
+
+  let email: string;
+  let password: string;
+  try {
+    const decrypted = JSON.parse(await decryptCredential(creds.encrypted_credentials));
+    email = decrypted.email;
+    password = decrypted.password;
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("decryption failed")) {
+      throw err;
+    }
+    throw new Error("Credential decryption failed — encryption key may have been rotated");
   }
 
   const session = await login(email, password);

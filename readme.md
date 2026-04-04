@@ -76,15 +76,9 @@ Open `.env.local` and fill in:
 | `NEXT_PUBLIC_SUPABASE_URL` | `http://127.0.0.1:54321` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The `anon key` from `supabase start` output |
 | `SUPABASE_SERVICE_ROLE_KEY` | The `service_role key` from `supabase start` output |
-| `WONINGNET_EMAIL` | Your WoningNet login email (see below) |
-| `WONINGNET_PASSWORD` | Your WoningNet login password (see below) |
+| `CREDENTIAL_ENCRYPTION_KEY` | A 256-bit base64 key for encrypting user credentials: `openssl rand -base64 32` |
 
-> **For Remco:** use the credentials below. These will be rotated after your review.
->
-> | Variable | Value |
-> |---|---|
-> | `WONINGNET_EMAIL` | `ipayinq123@gmail.com` |
-> | `WONINGNET_PASSWORD` | `rokduc-6Hyhbi-nehzub` |
+WoningNet credentials are stored per-user in the database (encrypted). Users enter them via the settings page after signing in. The same `CREDENTIAL_ENCRYPTION_KEY` must be set in both Vercel and Supabase edge function secrets.
 
 ### 4. Apply database migrations
 
