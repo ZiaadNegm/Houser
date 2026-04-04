@@ -1,7 +1,7 @@
 -- Phase A: Initial schema — 3 core tables
 -- profiles, automation_runs, app_settings
 
-create extension if not exists "uuid-ossp";
+
 
 -- ============================================================
 -- profiles: extends auth.users with app-specific data
@@ -29,7 +29,7 @@ create policy "Users can update own profile"
 -- automation_runs: log of each automation execution
 -- ============================================================
 create table public.automation_runs (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   status text not null default 'queued'
     check (status in ('queued', 'running', 'success', 'failed')),
@@ -64,7 +64,7 @@ create index idx_automation_runs_user_started
 -- app_settings: per-user key-value settings
 -- ============================================================
 create table public.app_settings (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   key text not null,
   value jsonb not null,

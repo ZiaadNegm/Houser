@@ -3,7 +3,7 @@
 -- The encryption key lives in edge function / Vercel env vars, NOT in the database.
 
 create table public.user_credentials (
-  id                    uuid primary key default uuid_generate_v4(),
+  id                    uuid primary key default gen_random_uuid(),
   user_id               uuid not null references public.profiles(id) on delete cascade,
   provider              text not null default 'woningnet',
   encrypted_credentials text not null,   -- base64(IV || ciphertext || authTag)
