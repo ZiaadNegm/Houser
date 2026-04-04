@@ -11,6 +11,7 @@ const navItems = [
   { href: "/", label: "Dashboard" },
   { href: "/runs", label: "Runs" },
   { href: "/preferences", label: "Preferences" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function AppSidebar({ userEmail }: { userEmail: string }) {
