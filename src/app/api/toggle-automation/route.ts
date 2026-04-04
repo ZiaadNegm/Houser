@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/supabase/with-auth";
+import { logApiError } from "@/lib/api-logger";
 
 export const POST = withAuth(async ({ supabase, user }, req) => {
   const body = await req.json();
@@ -13,7 +14,7 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
     .eq("id", user.id);
 
   if (error) {
-    console.error(`[toggle-automation] user=${user.id} update failed: ${error.message}`);
+    logApiError("toggle-automation", user.id, error);
     return NextResponse.json({ error: "Failed to update automation setting" }, { status: 500 });
   }
 

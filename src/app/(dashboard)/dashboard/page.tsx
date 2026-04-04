@@ -10,10 +10,10 @@ import { AutoApplyStatus } from "@/components/auto-apply-status";
 import { StatCard } from "@/components/stat-card";
 import { AttentionCards } from "@/components/attention-cards";
 import { CredentialsBanner } from "@/components/credentials-banner";
-import { computeDashboardStats } from "@/lib/domain/stats";
+import { computeDashboardStats, TOTAL_RULES } from "@/lib/domain/stats";
 import { formatRunDate } from "@/lib/utils";
 import type { AutomationRun } from "@/lib/domain/types";
-import { sortListings, capitalizeStatus } from "@/lib/domain/types";
+import { sortListings, capitalizeStatus, statusVariant } from "@/lib/domain/types";
 
 export default async function DashboardPage() {
   const user = await getUser();
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       getBlacklistEntries(supabase, user.id).catch(() => []),
     ]);
 
-  const dryRunEnabled = dryRunSetting?.value === false ? false : true;
+  const dryRunEnabled = dryRunSetting?.value !== false;
   const recentRuns = runs.slice(0, 7);
   const latestSuccessful = runs.find((r) => r.status === "success" && r.result_data);
   const listings = latestSuccessful?.result_data
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-3 lg:grid-cols-1 lg:gap-3">
             <StatCard label="Applied Today" value={stats.appliedToday} />
-            <StatCard label="Active Rules" value={`${stats.activeRules} / 6`} />
+            <StatCard label="Active Rules" value={`${stats.activeRules} / ${TOTAL_RULES}`} />
             <StatCard label="Total Runs" value={stats.totalRuns} />
           </div>
 
@@ -126,13 +126,7 @@ export default async function DashboardPage() {
                         <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
                       </div>
                       <Badge
-                        variant={
-                          run.status === "success"
-                            ? "success"
-                            : run.status === "failed"
-                              ? "destructive"
-                              : "warning"
-                        }
+                        variant={statusVariant(run.status)}
                         className="shrink-0 text-[10px]"
                       >
                         {capitalizeStatus(run.status)}
