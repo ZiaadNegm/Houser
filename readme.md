@@ -1,30 +1,46 @@
-# WoningNet DAK Auto-Apply
+# Houser
 
-Automatically scores, applies to, and manages your social housing applications on [WoningNet DAK](https://almere.mijndak.nl) (Almere).
+Automatically scores, applies to, and manages social housing applications on [WoningNet DAK](https://almere.mijndak.nl) (Almere).
 
 <p align="center">
   <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="800">
 </p>
 
-## Why
+## The Problem
 
-In the Dutch social housing system, you can only hold a limited number of active applications at once. Miss a better listing? Too bad — your slots are full. This app runs on a schedule, scores every available listing against your preferences, and automatically applies to the best ones — revoking weaker applications when something better appears.
+Social housing in the Netherlands works through a queue system. You register, you wait (often years), and when listings appear you respond to the ones you want. But there's a catch: you can only hold a limited number of active applications at once. Respond to the wrong listing and you've burned a slot. Miss a good one because you were busy at work, and someone with less queue time takes your spot.
 
-## How It Works
+I was checking the portal manually between meetings, forgetting to check on weekends, and generally losing out on better apartments because the system rewards constant attention I couldn't give it.
 
-Every run executes a full pipeline from login to verification:
+## The Solution
+
+Houser runs on a schedule (twice daily), logs into WoningNet on your behalf, and makes the same decisions you would - just without the forgetting. It scores every available listing against your preferences (rent budget, number of rooms, neighborhoods, contract type) and your queue position. If a new listing scores higher than one of your current applications, it revokes the weaker one and applies to the better option.
+
+The entire pipeline runs as a single pass:
 
 ```mermaid
 flowchart LR
-    A["⏰ Cron / Manual"] --> B["🔐 Login"]
-    B --> C["📋 Fetch Listings"]
-    C --> D["📊 Score & Rank"]
-    D --> E["🤔 Decide"]
-    E --> F["✅ Apply / Revoke"]
-    F --> G["🔍 Verify"]
+    A[Cron / Manual] --> B[Login]
+    B --> C[Fetch Listings]
+    C --> D[Score & Rank]
+    D --> E[Decide]
+    E --> F[Apply / Revoke]
+    F --> G[Verify]
 ```
 
-Listings are scored 0–100 using weighted rules (queue position, rent, rooms, neighborhood, contract type). The decision engine fills empty slots with top candidates and swaps weaker active applications for better ones.
+No browser automation, no scraping - just direct HTTP calls to WoningNet's API. Every run is logged with full detail so you can see exactly what happened and why.
+
+```mermaid
+flowchart LR
+    A[Cron / Manual] --> B[Login]
+    B --> C[Fetch Listings]
+    C --> D[Score & Rank]
+    D --> E[Decide]
+    E --> F[Apply / Revoke]
+    F --> G[Verify]
+```
+
+Listings are scored 0-100 using weighted rules (queue position, rent, rooms, neighborhood, contract type). The decision engine fills empty slots with top candidates and swaps weaker active applications for better ones.
 
 ## Screenshots
 
@@ -37,7 +53,7 @@ Listings are scored 0–100 using weighted rules (queue position, rent, rooms, n
 
 ## Tech Stack
 
-**Next.js 16** · **Supabase** (Postgres, Auth, Edge Functions) · **Deno** · **TypeScript**
+**Next.js 16** / **Supabase** (Postgres, Auth, Edge Functions) / **Deno** / **TypeScript**
 
 ## Getting Started
 
@@ -47,18 +63,18 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) and [
 git clone https://github.com/ZiaadNegm/houser.git
 cd houser
 npm install
-supabase start          # starts local Postgres, Auth, Edge Functions
+supabase start
 cp .env.local.example .env.local
-# fill in ANON_KEY, SERVICE_ROLE_KEY (from supabase start output),
+# Fill in ANON_KEY, SERVICE_ROLE_KEY (from supabase start output),
 # and CREDENTIAL_ENCRYPTION_KEY (openssl rand -base64 32)
-supabase db reset       # apply migrations
+supabase db reset
 ```
 
 Run in two terminals:
 
 ```bash
 supabase functions serve --env-file .env.local   # edge functions
-npm run dev                                       # frontend → localhost:3000
+npm run dev                                       # frontend at localhost:3000
 ```
 
 Register, add your WoningNet credentials in settings, and hit **Trigger Run**.
