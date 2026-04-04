@@ -14,7 +14,7 @@ function getKeyBytes(): Uint8Array {
 
 export async function encryptCredential(plaintext: string): Promise<string> {
   const keyBytes = getKeyBytes();
-  const key = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", keyBytes.buffer as ArrayBuffer, "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const encoded = new TextEncoder().encode(plaintext);
 
