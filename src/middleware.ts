@@ -7,5 +7,5 @@ export async function middleware(request: NextRequest) {
 
 // Public paths (login, register) also defined in lib/supabase/middleware.ts PUBLIC_PATHS — keep in sync.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|login|register|api).*)"],
+  matcher: ["/((?!monitoring|_next/static|_next/image|favicon.ico|login|register|api).*)"],
 };
