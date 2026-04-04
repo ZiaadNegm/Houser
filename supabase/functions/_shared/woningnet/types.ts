@@ -13,18 +13,14 @@ export interface WoningNetListing {
   id: string; // PublicatieLijst.List[].Id — used for apply/revoke
   address: string; // Formatted: "Straatnaam Huisnummer, Woonplaats"
   neighborhood: string; // Adres.Wijk
-  postcode: string; // Adres.Postcode
   position: number; // parseInt(VoorlopigePositie) — primary ranking signal
   rooms: number; // Eenheid.AantalKamers
   rentNet: string; // Eenheid.NettoHuur
-  energyLabel: string; // Eenheid.EnergieLabel
   contractType: string; // ContractVorm ("Onbepaalde tijd", etc.)
   propertyType: string; // Eenheid.DetailSoort ("Etagewoning", etc.)
   deadline: string; // EinddatumTijd (ISO 8601)
   hasApplied: boolean; // HeeftGereageerd — idempotency check for Phase 2
   canRevoke: boolean; // IsIntrekkenReactieToegestaan — needed for Phase 2 revoke
-  totalApplicants: number; // parseInt(AantalReactiesOpPublicatie)
-  owner: string; // Eenheid.Eigenaar (housing corporation)
   imageUrl: string; // Foto_Locatie — full Cloudinary URL for listing photo
 }
 
