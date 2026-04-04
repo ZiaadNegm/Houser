@@ -109,7 +109,7 @@ The app is available at [http://localhost:3000](http://localhost:3000).
 ### First use
 
 1. Open [http://localhost:3000](http://localhost:3000)
-2. Sign up with any email and password (local Supabase auto-confirms accounts — no real email needed)
+2. Click **Register** and create an account — you'll need valid WoningNet credentials (local Supabase auto-confirms accounts — no real email verification needed)
 3. Click **"Trigger Run"** on the dashboard
 4. After a few seconds the page refreshes with real WoningNet listings
 
