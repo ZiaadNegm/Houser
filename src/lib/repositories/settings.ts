@@ -13,7 +13,12 @@ export async function getPreferences(
     .eq("key", "preferences")
     .single();
 
-  if (error || !data) return { ...DEFAULT_PREFERENCES };
+  if (error || !data) {
+    if (error && error.code !== "PGRST116") {
+      console.error(`[repositories/settings] getPreferences failed for user=${userId}: ${error.message}`);
+    }
+    return { ...DEFAULT_PREFERENCES };
+  }
   return { ...DEFAULT_PREFERENCES, ...(data.value as Partial<UserPreferences>) };
 }
 

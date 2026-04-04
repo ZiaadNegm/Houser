@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/supabase/with-auth";
+import { logApiError } from "@/lib/api-logger";
 
-export const POST = withAuth(async ({ supabase }) => {
+export const POST = withAuth(async ({ supabase, user }) => {
   const { data: { session } } = await supabase.auth.getSession();
 
   try {
@@ -20,11 +21,12 @@ export const POST = withAuth(async ({ supabase }) => {
 
     const data = await res.json();
     if (!res.ok) {
+      console.error(`[trigger-run] user=${user.id} edge-function returned ${res.status}: ${JSON.stringify(data)}`);
       return NextResponse.json(data, { status: res.status });
     }
     return NextResponse.json(data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logApiError("trigger-run", user.id, err);
+    return NextResponse.json({ error: "Failed to trigger run" }, { status: 500 });
   }
 });

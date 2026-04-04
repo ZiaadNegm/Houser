@@ -13,7 +13,8 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
     .eq("id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error(`[toggle-automation] user=${user.id} update failed: ${error.message}`);
+    return NextResponse.json({ error: "Failed to update automation setting" }, { status: 500 });
   }
 
   return NextResponse.json({ automation_enabled: body.enabled });
