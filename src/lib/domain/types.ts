@@ -46,18 +46,14 @@ export interface WoningNetListing {
   id: string;
   address: string;
   neighborhood: string;
-  postcode: string;
   position: number;
   rooms: number;
   rentNet: string;
-  energyLabel: string;
   contractType: string;
   propertyType: string;
   deadline: string;
   hasApplied: boolean;
   canRevoke: boolean;
-  totalApplicants: number;
-  owner: string;
   imageUrl: string;
 }
 
