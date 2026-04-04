@@ -6,15 +6,29 @@ Automatically scores, applies to, and manages social housing applications on [Wo
   <img src="docs/screenshots/dashboard.png" alt="Dashboard" width="800">
 </p>
 
-## Motivation
+## The Problem
 
-I built this because I kept missing housing listings while juggling work in the Netherlands. The social housing system here requires constant manual checking, and I was losing out on better apartments simply because I didn't refresh the portal in time. On top of that, you can only hold a limited number of active applications at once, so even when I did check, my slots were often already taken by weaker listings.
+Social housing in the Netherlands works through a queue system. You register, you wait (often years), and when listings appear you respond to the ones you want. But there's a catch: you can only hold a limited number of active applications at once. Respond to the wrong listing and you've burned a slot. Miss a good one because you were busy at work, and someone with less queue time takes your spot.
 
-I wanted something that would just handle it: check every listing, figure out which ones are worth applying to, and swap out weaker applications when something better shows up.
+I was checking the portal manually between meetings, forgetting to check on weekends, and generally losing out on better apartments because the system rewards constant attention I couldn't give it.
 
-## How It Works
+## The Solution
 
-Every run executes a pipeline from login to verification:
+Houser runs on a schedule (twice daily), logs into WoningNet on your behalf, and makes the same decisions you would - just without the forgetting. It scores every available listing against your preferences (rent budget, number of rooms, neighborhoods, contract type) and your queue position. If a new listing scores higher than one of your current applications, it revokes the weaker one and applies to the better option.
+
+The entire pipeline runs as a single pass:
+
+```mermaid
+flowchart LR
+    A[Cron / Manual] --> B[Login]
+    B --> C[Fetch Listings]
+    C --> D[Score & Rank]
+    D --> E[Decide]
+    E --> F[Apply / Revoke]
+    F --> G[Verify]
+```
+
+No browser automation, no scraping - just direct HTTP calls to WoningNet's API. Every run is logged with full detail so you can see exactly what happened and why.
 
 ```mermaid
 flowchart LR
