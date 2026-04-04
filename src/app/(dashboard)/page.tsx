@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getRecentRuns } from "@/lib/repositories/runs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,40 +8,42 @@ import { SettingsToggle } from "@/components/settings-toggle";
 import { ListingsTable } from "@/components/listings-table";
 import { StatusDot } from "@/components/status-dot";
 import { AttentionCards } from "@/components/attention-cards";
+import { CredentialsBanner } from "@/components/credentials-banner";
 import { formatRunDate, formatDuration } from "@/lib/utils";
 import type { AutomationRun } from "@/lib/domain/types";
 import { sortListings } from "@/lib/domain/types";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
+  if (!user) return null;
 
-  const { data: profile } = user
-    ? await supabase
+  const supabase = await createClient();
+
+  const [{ data: profile }, { data: credentials }, runs, { data: dryRunSetting }] =
+    await Promise.all([
+      supabase
         .from("profiles")
         .select("automation_enabled")
         .eq("id", user.id)
-        .single()
-    : { data: null };
+        .single(),
+      supabase
+        .from("user_credentials")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("provider", "woningnet")
+        .maybeSingle(),
+      getRecentRuns(supabase, user.id, 10).catch(
+        () => [] as AutomationRun[]
+      ),
+      supabase
+        .from("app_settings")
+        .select("value")
+        .eq("user_id", user.id)
+        .eq("key", "dry_run")
+        .single(),
+    ]);
 
-  let runs: AutomationRun[] = [];
-  let loadError = false;
-  let dryRunEnabled = true;
-  if (user) {
-    try {
-      runs = await getRecentRuns(supabase, user.id, 10);
-    } catch {
-      loadError = true;
-    }
-    const { data: dryRunSetting } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("user_id", user.id)
-      .eq("key", "dry_run")
-      .single();
-    dryRunEnabled = dryRunSetting?.value === false ? false : true;
-  }
-
+  const dryRunEnabled = dryRunSetting?.value === false ? false : true;
   const recentRuns = runs.slice(0, 7);
   const latestSuccessful = runs.find((r) => r.status === "success" && r.result_data);
   const listings = latestSuccessful?.result_data
@@ -59,7 +61,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <AttentionCards loadError={loadError} runs={runs} />
+      {profile?.automation_enabled && !credentials && (
+        <CredentialsBanner />
+      )}
+
+      <AttentionCards loadError={false} runs={runs} />
 
       <Card>
         <CardHeader className="pb-3">

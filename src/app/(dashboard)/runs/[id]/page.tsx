@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getRunById } from "@/lib/repositories/runs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -116,10 +116,10 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   if (!UUID_RE.test(id)) notFound();
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+  const user = await getUser();
   if (!user) notFound();
+
+  const supabase = await createClient();
 
   const run = await getRunById(supabase, user.id, id);
   if (!run) notFound();

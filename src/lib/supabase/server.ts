@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -25,3 +26,13 @@ export async function createClient() {
     }
   );
 }
+
+/**
+ * Request-scoped cached auth check. Call from any server component —
+ * only hits Supabase once per request regardless of how many components use it.
+ */
+export const getUser = cache(async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+});

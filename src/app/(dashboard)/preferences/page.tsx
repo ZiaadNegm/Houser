@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getPreferences } from "@/lib/repositories/settings";
 import { getBlacklist } from "@/lib/repositories/blacklist";
 import { getRecentRuns } from "@/lib/repositories/runs";
@@ -7,10 +7,10 @@ import { BlacklistManager } from "@/components/blacklist-manager";
 import type { WoningNetListing } from "@/lib/domain/types";
 
 export default async function PreferencesPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
+  const user = await getUser();
   if (!user) return null;
+
+  const supabase = await createClient();
 
   const [preferences, blacklist, runs] = await Promise.all([
     getPreferences(supabase, user.id),

@@ -1,14 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getUser } from "@/lib/supabase/server";
 import { getRecentRuns } from "@/lib/repositories/runs";
 import { RunList } from "@/components/run-list";
 import type { AutomationRun } from "@/lib/domain/types";
 
 export default async function RunsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getUser();
 
   let runs: AutomationRun[] = [];
   if (user) {
+    const supabase = await createClient();
     try {
       runs = await getRecentRuns(supabase, user.id);
     } catch {
