@@ -4,12 +4,12 @@
 
 const IV_BYTES = 12;
 
-function getKeyBytes(): Buffer {
+function getKeyBytes(): Uint8Array {
   const raw = process.env.CREDENTIAL_ENCRYPTION_KEY;
   if (!raw) {
     throw new Error("CREDENTIAL_ENCRYPTION_KEY environment variable is not set");
   }
-  return Buffer.from(raw, "base64");
+  return new Uint8Array(Buffer.from(raw, "base64"));
 }
 
 export async function encryptCredential(plaintext: string): Promise<string> {
