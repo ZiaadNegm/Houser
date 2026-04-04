@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Paths accessible without authentication.
 // Also listed in src/middleware.ts matcher regex — keep both in sync.
-export const PUBLIC_PATHS = ["/login", "/register"];
+export const PUBLIC_PATHS = ["/", "/login", "/register"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -33,7 +33,10 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicPath = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
+  const pathname = request.nextUrl.pathname;
+  const isPublicPath = PUBLIC_PATHS.some((p) =>
+    p === "/" ? pathname === "/" : pathname.startsWith(p)
+  );
   if (!user && !isPublicPath) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
