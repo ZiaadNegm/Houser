@@ -19,11 +19,11 @@ alter table public.profiles enable row level security;
 
 create policy "Users can view own profile"
   on public.profiles for select
-  using (auth.uid() = id);
+  using ((select auth.uid()) = id);
 
 create policy "Users can update own profile"
   on public.profiles for update
-  using (auth.uid() = id);
+  using ((select auth.uid()) = id);
 
 -- ============================================================
 -- automation_runs: log of each automation execution
@@ -47,15 +47,15 @@ alter table public.automation_runs enable row level security;
 
 create policy "Users can view own runs"
   on public.automation_runs for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "Users can insert own runs"
   on public.automation_runs for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users can update own runs"
   on public.automation_runs for update
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create index idx_automation_runs_user_started
   on public.automation_runs(user_id, started_at desc);
@@ -77,7 +77,7 @@ alter table public.app_settings enable row level security;
 
 create policy "Users can manage own settings"
   on public.app_settings for all
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- ============================================================
 -- Trigger: auto-create profile on auth.users insert
@@ -89,7 +89,7 @@ begin
   values (new.id, new.email);
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users

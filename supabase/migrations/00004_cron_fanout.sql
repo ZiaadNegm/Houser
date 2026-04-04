@@ -7,6 +7,7 @@ create or replace function public.cron_run_automations()
 returns void
 language plpgsql
 security definer
+set search_path = public, extensions
 as $$
 declare
   current_hour int;

@@ -16,16 +16,16 @@ alter table public.user_credentials enable row level security;
 
 create policy "Users can view own credentials"
   on public.user_credentials for select
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "Users can insert own credentials"
   on public.user_credentials for insert
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "Users can update own credentials"
   on public.user_credentials for update
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 create policy "Users can delete own credentials"
   on public.user_credentials for delete
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
