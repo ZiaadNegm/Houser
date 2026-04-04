@@ -1,133 +1,153 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatRunDate, formatDuration, formatDeadline } from "@/lib/utils";
-import { statusVariant, listingUrl, listingImageUrl, STEP_LABELS, sortListings } from "@/lib/domain/types";
-import type { AutomationRun, StepLogEntry, ListingWithScore } from "@/lib/domain/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatRunDate, formatDuration } from "@/lib/utils";
+import { statusVariant, capitalizeStatus, listingImageUrl, sortListings } from "@/lib/domain/types";
+import type { AutomationRun, ListingWithScore } from "@/lib/domain/types";
 
+function appliedCount(run: AutomationRun): number {
+  return (run.result_data ?? []).filter((l) => l.hasApplied).length;
+}
 
-function RunDetail({ run }: { run: AutomationRun }) {
-  const steps = (run.step_log ?? []) as StepLogEntry[];
-  const sorted = sortListings(run.result_data ?? []);
-  const hasScores = sorted.some((l) => l.score != null);
-  const topListings = sorted.slice(0, 5);
+function appliedThumbnails(run: AutomationRun): ListingWithScore[] {
+  return sortListings(run.result_data ?? []).filter((l) => l.hasApplied).slice(0, 6);
+}
+
+function LatestRunCard({ run }: { run: AutomationRun }) {
+  const { day, date, time } = formatRunDate(run.started_at);
+  const duration = formatDuration(run.started_at, run.completed_at);
+  const applied = appliedCount(run);
+  const thumbs = appliedThumbnails(run);
 
   return (
-    <div className="px-4 pb-4 pt-1 space-y-3">
-      {/* Steps summary */}
-      {steps.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {steps.map((step, i) => (
-            <span
-              key={i}
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
-                step.status === "success"
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-              }`}
-            >
-              {STEP_LABELS[step.step] ?? step.step}
+    <Link href={`/runs/${run.id}`} className="block group">
+      <Card className="transition-shadow group-hover:shadow-md">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">
+              Latest Run: {day} {date}, {time}
+            </CardTitle>
+            <Badge variant={statusVariant(run.status)}>{capitalizeStatus(run.status)}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>Duration: {duration}</span>
+            <span>
+              Applied to {applied} out of {run.listings_found} listings found
             </span>
-          ))}
-        </div>
-      )}
+          </div>
 
-      {/* Top listings */}
-      {topListings.length > 0 && (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground font-medium">
-            Top listings ({sorted.length} total)
+          {thumbs.length > 0 && (
+            <div className="flex gap-2 overflow-hidden">
+              {thumbs.map((l) => {
+                const src = listingImageUrl(l.imageUrl ?? "", 120, 80);
+                return src ? (
+                  <img
+                    key={l.id}
+                    src={src}
+                    alt={l.address}
+                    className="h-12 w-18 rounded object-cover shrink-0"
+                  />
+                ) : null;
+              })}
+            </div>
+          )}
+
+          {run.error_message && (
+            <p className="text-xs text-destructive">{run.error_message}</p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function TimelineItem({ run }: { run: AutomationRun }) {
+  const { day, date, time } = formatRunDate(run.started_at);
+  const applied = appliedCount(run);
+  const thumbs = appliedThumbnails(run);
+
+  return (
+    <Link href={`/runs/${run.id}`} className="block group">
+      <div className="relative flex gap-4 pb-8 last:pb-0">
+        {/* Vertical line */}
+        <div className="absolute left-[7px] top-4 bottom-0 w-px bg-border group-last:hidden" />
+
+        {/* Dot */}
+        <div className="relative z-10 mt-1.5 flex-shrink-0">
+          <div
+            className={`h-4 w-4 rounded-full border-2 ${
+              run.status === "success"
+                ? "border-green-500 bg-green-500"
+                : run.status === "failed"
+                  ? "border-red-500 bg-red-500"
+                  : "border-muted-foreground bg-background"
+            }`}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 space-y-1 rounded-lg p-2 -mt-1 transition-colors group-hover:bg-muted/50">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium">
+              {day} {date}, {time}
+            </span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {run.trigger_type === "cron" ? "Auto" : "Manual"}
+            </Badge>
+            <Badge variant={statusVariant(run.status)} className="text-[10px] px-1.5 py-0">
+              {capitalizeStatus(run.status)}
+            </Badge>
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            {run.listings_found} listings found, {applied} applied
           </p>
-          {topListings.map((l) => {
-            const imgSrc = l.hasApplied ? listingImageUrl(l.imageUrl ?? "", 120, 80) : "";
-            return (
-              <a
-                key={l.id}
-                href={listingUrl(l.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 text-xs py-1 hover:bg-muted/50 rounded px-1 -mx-1"
-              >
-                {imgSrc && (
-                  <img src={imgSrc} alt="" className="h-10 w-16 rounded object-cover shrink-0" />
-                )}
-                <span className="font-medium truncate flex-1">{l.address}</span>
-                {hasScores && <span className="text-muted-foreground w-8 text-right">{l.score}</span>}
-                <span className="text-muted-foreground w-8 text-right">#{l.position}</span>
-                <span className="text-muted-foreground w-16 text-right">&euro;{l.rentNet}</span>
-                <span className="text-muted-foreground w-16 text-right">til {formatDeadline(l.deadline)}</span>
-                {l.hasApplied && <Badge variant="default" className="text-[10px] px-1.5 py-0">Applied</Badge>}
-              </a>
-            );
-          })}
+
+          {thumbs.length > 0 && (
+            <div className="flex gap-1.5 overflow-hidden pt-1">
+              {thumbs.map((l) => {
+                const src = listingImageUrl(l.imageUrl ?? "", 120, 80);
+                return src ? (
+                  <img
+                    key={l.id}
+                    src={src}
+                    alt={l.address}
+                    className="h-10 w-16 rounded object-cover shrink-0"
+                  />
+                ) : null;
+              })}
+            </div>
+          )}
+
+          {run.error_message && (
+            <p className="text-xs text-destructive">{run.error_message}</p>
+          )}
         </div>
-      )}
-
-      {/* Error message */}
-      {run.error_message && (
-        <p className="text-xs text-destructive">{run.error_message}</p>
-      )}
-
-      {/* Link to full detail */}
-      <Link
-        href={`/runs/${run.id}`}
-        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline underline-offset-2"
-      >
-        View full detail
-        <ChevronRight className="h-3 w-3" />
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }
 
 export function RunList({ runs }: { runs: AutomationRun[] }) {
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    // First run expanded by default
-    return runs.length > 0 ? new Set([runs[0].id]) : new Set();
-  });
+  if (runs.length === 0) return null;
 
-  function toggle(id: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const [latest, ...rest] = runs;
 
   return (
-    <div className="divide-y rounded-md border">
-      {runs.map((run) => {
-        const { day, date, time } = formatRunDate(run.started_at);
-        const isOpen = expanded.has(run.id);
+    <div className="space-y-6">
+      <LatestRunCard run={latest} />
 
-        return (
-          <div key={run.id}>
-            <button
-              onClick={() => toggle(run.id)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-left hover:bg-muted/50 transition-colors"
-            >
-              <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
-              <span className="w-36 shrink-0">{day} {date}, {time}</span>
-              <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
-              <Badge variant="outline" className="text-xs">
-                {run.trigger_type === "cron" ? "Auto" : "Manual"}
-              </Badge>
-              <span className="text-muted-foreground">
-                {run.listings_found} listings
-                {run.actions_taken > 0 && `, ${run.actions_taken} actions`}
-              </span>
-              <span className="ml-auto text-muted-foreground">
-                {formatDuration(run.started_at, run.completed_at)}
-              </span>
-            </button>
-            {isOpen && <RunDetail run={run} />}
-          </div>
-        );
-      })}
+      {rest.length > 0 && (
+        <div className="pl-1">
+          {rest.map((run) => (
+            <TimelineItem key={run.id} run={run} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

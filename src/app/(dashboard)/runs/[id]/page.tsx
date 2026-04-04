@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { getRunById } from "@/lib/repositories/runs";
+import { getBlacklistEntries } from "@/lib/repositories/blacklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ListingsTable } from "@/components/listings-table";
 import { formatRunDate, formatDuration } from "@/lib/utils";
 import type { StepLogEntry, ActionRecord } from "@/lib/domain/types";
-import { STEP_LABELS, statusVariant, listingUrl, sortListings } from "@/lib/domain/types";
+import { STEP_LABELS, statusVariant, capitalizeStatus, listingUrl, sortListings } from "@/lib/domain/types";
 
 function actionBadgeVariant(status: string) {
   switch (status) {
@@ -121,8 +122,15 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
 
   const supabase = await createClient();
 
-  const run = await getRunById(supabase, user.id, id);
+  const [run, blacklistEntries] = await Promise.all([
+    getRunById(supabase, user.id, id),
+    getBlacklistEntries(supabase, user.id).catch(() => []),
+  ]);
   if (!run) notFound();
+
+  const blockedIds = new Set(
+    blacklistEntries.filter((e) => e.type === "id").map((e) => e.value)
+  );
 
   const { day, date, time } = formatRunDate(run.started_at);
   const duration = formatDuration(run.started_at, run.completed_at);
@@ -145,7 +153,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Run Summary</CardTitle>
-            <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
+            <Badge variant={statusVariant(run.status)}>{capitalizeStatus(run.status)}</Badge>
           </div>
         </CardHeader>
         <CardContent>
@@ -196,7 +204,33 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
         listings={listings}
         title="Listings"
         subtitle={`${listings.length} listings fetched in this run`}
+        blockedIds={blockedIds}
       />
+
+      {/* Technical details */}
+      <details className="rounded-md border">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+          View full technical details
+        </summary>
+        <div className="border-t px-4 py-4 space-y-4">
+          {steps.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">step_log</p>
+              <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+                {JSON.stringify(run.step_log, null, 2)}
+              </pre>
+            </div>
+          )}
+          {run.result_data && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">result_data</p>
+              <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+                {JSON.stringify(run.result_data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      </details>
     </div>
   );
 }
