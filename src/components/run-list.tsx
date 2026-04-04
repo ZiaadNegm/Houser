@@ -81,9 +81,9 @@ function TimelineItem({ run }: { run: AutomationRun }) {
           <div
             className={`h-4 w-4 rounded-full border-2 ${
               run.status === "success"
-                ? "border-green-500 bg-green-500"
+                ? "border-primary bg-primary"
                 : run.status === "failed"
-                  ? "border-red-500 bg-red-500"
+                  ? "border-destructive bg-destructive"
                   : "border-muted-foreground bg-background"
             }`}
           />

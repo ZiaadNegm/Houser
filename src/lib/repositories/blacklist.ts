@@ -34,7 +34,10 @@ export async function addBlacklistEntry(
   value: string,
   label: string
 ): Promise<BlacklistEntry> {
-  // Check entry limit
+  // Check entry limit before inserting. This is intentionally two queries
+  // (HEAD count + INSERT) rather than a single RPC — the count is a cheap
+  // HEAD-only request and keeps the logic in application code where it's
+  // easier to maintain.
   const { count, error: countError } = await supabase
     .from("blacklist_entries")
     .select("*", { count: "exact", head: true })
@@ -52,6 +55,23 @@ export async function addBlacklistEntry(
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+export async function getBlacklistEntry(
+  supabase: SupabaseClient,
+  userId: string,
+  type: BlacklistEntryType,
+  value: string
+): Promise<BlacklistEntry | null> {
+  const { data } = await supabase
+    .from("blacklist_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("type", type)
+    .eq("value", value)
+    .maybeSingle();
+
   return data;
 }
 

@@ -206,7 +206,7 @@ export function scoreListings(
         if (reason) matchReasons.push(reason);
       }
 
-      const score = Math.round(weightedSum / totalWeight);
+      const score = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 50;
       return { ...listing, score, matchReasons };
     })
     .sort((a, b) => b.score - a.score);

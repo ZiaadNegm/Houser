@@ -2,6 +2,9 @@ import type { AutomationRun, UserPreferences } from "./types";
 
 const TZ = "Europe/Amsterdam";
 
+/** Total number of preference-based rules tracked by the dashboard. */
+export const TOTAL_RULES = 6;
+
 export function computeDashboardStats(
   runs: AutomationRun[],
   preferences: UserPreferences | null,

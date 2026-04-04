@@ -11,6 +11,10 @@ export const POST = withAuth(async ({ supabase, user }, request) => {
     return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
   }
 
+  if (typeof email !== "string" || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+  }
+
   try {
     await storeWoningNetCredentials(supabase, user.id, email, password);
     return NextResponse.json({ success: true });
