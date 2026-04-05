@@ -127,6 +127,16 @@ export function RegisterForm() {
             <p className="text-sm font-medium text-muted-foreground">WoningNet credentials</p>
             <p className="text-xs text-muted-foreground">
               Your WoningNet login will be verified before your account is created.
+              Don&apos;t know your credentials?{" "}
+              <a
+                href="https://www.woningnet.nl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Visit WoningNet
+              </a>{" "}
+              to retrieve or reset them.
             </p>
             <div className="flex flex-col gap-2">
               <Label htmlFor="wn-email">WoningNet email</Label>
