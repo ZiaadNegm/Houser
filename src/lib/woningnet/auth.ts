@@ -164,6 +164,7 @@ export async function verifyWoningNetCredentials(
     return { valid: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[WoningNet] Credential verification failed:", message);
     if (message.includes("Login failed") || message.includes("Login request failed")) {
       return { valid: false, error: "Invalid WoningNet credentials" };
     }

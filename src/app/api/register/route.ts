@@ -22,8 +22,10 @@ export async function POST(request: Request) {
   }
 
   // 1. Verify WoningNet credentials
+  console.log("[Register] Verifying WoningNet credentials for:", woningnetEmail);
   const verification = await verifyWoningNetCredentials(woningnetEmail, woningnetPassword);
   if (!verification.valid) {
+    console.error("[Register] WoningNet verification failed:", verification.error);
     return NextResponse.json(
       { error: verification.error },
       { status: 400 },
