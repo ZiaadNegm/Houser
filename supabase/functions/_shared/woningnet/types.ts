@@ -28,4 +28,6 @@ export interface WoningNetListing {
 export interface FetchListingsResult {
   listings: WoningNetListing[];
   rawCount: number;
+  skippedNonDwellingCount: number; // raw items dropped because EenheidSoort !== "Woonruimte"
+  skippedUnitTypeBreakdown: Record<string, number>; // e.g. { Parkeren: 2 }
 }
