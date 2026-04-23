@@ -56,6 +56,7 @@ async function initSession(): Promise<{
   csrf: string;
   moduleVersion: string;
 }> {
+  console.log("[WoningNet] initSession: fetching anonymous session and module version");
   const [anonResponse, versionResponse] = await Promise.all([
     fetch(`${BASE_URL}${LOGIN_PATH}`, {
       method: "POST",
@@ -72,6 +73,9 @@ async function initSession(): Promise<{
     }),
   ]);
 
+  console.log("[WoningNet] initSession: anon response status=%d, version response status=%d", anonResponse.status, versionResponse.status);
+  console.log("[WoningNet] initSession: anon set-cookie count=%d", anonResponse.headers.getSetCookie().length);
+
   if (!versionResponse.ok) {
     throw new Error(
       `Module version fetch failed: ${versionResponse.status} ${versionResponse.statusText}`,
@@ -80,6 +84,7 @@ async function initSession(): Promise<{
 
   const { nr1, nr2 } = parseCookiesFromResponse(anonResponse);
   const csrf = extractCsrf(nr2);
+  console.log("[WoningNet] initSession: got cookies and csrf, csrf length=%d", csrf.length);
 
   const versionJson = await versionResponse.json();
   const moduleVersion: string = versionJson.versionToken;
@@ -87,6 +92,7 @@ async function initSession(): Promise<{
     throw new Error("Module version token not found in response");
   }
 
+  console.log("[WoningNet] initSession: moduleVersion=%s", moduleVersion);
   return { nr1, nr2, csrf, moduleVersion };
 }
 
@@ -117,6 +123,7 @@ export async function login(
     },
   };
 
+  console.log("[WoningNet] login: sending login request for email=%s", email);
   const loginResponse = await fetch(`${BASE_URL}${LOGIN_PATH}`, {
     method: "POST",
     headers: {
@@ -131,21 +138,28 @@ export async function login(
     redirect: "manual",
   });
 
+  console.log("[WoningNet] login: response status=%d, set-cookie count=%d", loginResponse.status, loginResponse.headers.getSetCookie().length);
+
   if (!loginResponse.ok && loginResponse.status !== 302) {
+    const body = await loginResponse.text();
+    console.error("[WoningNet] login: unexpected status=%d, body=%s", loginResponse.status, body.slice(0, 500));
     throw new Error(
       `Login request failed: ${loginResponse.status} ${loginResponse.statusText}`,
     );
   }
 
   const responseJson = await loginResponse.json();
+  console.log("[WoningNet] login: IsNaarWoningOverzicht=%s, response keys=%s", responseJson.data?.IsNaarWoningOverzicht, Object.keys(responseJson.data ?? {}).join(","));
 
   if (responseJson.data?.IsNaarWoningOverzicht !== true) {
+    console.error("[WoningNet] login: redirect not confirmed, data=%s", JSON.stringify(responseJson.data ?? {}).slice(0, 500));
     throw new Error("Login failed: WoningNet did not confirm redirect");
   }
 
   const { nr1: newNr1, nr2: newNr2 } =
     parseCookiesFromResponse(loginResponse);
   const newCsrf = extractCsrf(newNr2);
+  console.log("[WoningNet] login: success, got authenticated session");
 
   return {
     nr1Cookie: newNr1,
@@ -164,6 +178,7 @@ export async function verifyWoningNetCredentials(
     return { valid: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[WoningNet] Credential verification failed:", message);
     if (message.includes("Login failed") || message.includes("Login request failed")) {
       return { valid: false, error: "Invalid WoningNet credentials" };
     }

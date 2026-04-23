@@ -22,7 +22,7 @@ function LatestRunCard({ run }: { run: AutomationRun }) {
   const thumbs = appliedThumbnails(run);
 
   return (
-    <Link href={`/runs/${run.id}`} className="block group">
+    <Link href={`/runs/${run.id}`} prefetch={false} className="block group">
       <Card className="transition-shadow group-hover:shadow-md">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -71,7 +71,7 @@ function TimelineItem({ run }: { run: AutomationRun }) {
   const thumbs = appliedThumbnails(run);
 
   return (
-    <Link href={`/runs/${run.id}`} className="block group">
+    <Link href={`/runs/${run.id}`} prefetch={false} className="block group">
       <div className="relative flex gap-4 pb-8 last:pb-0">
         {/* Vertical line */}
         <div className="absolute left-[7px] top-4 bottom-0 w-px bg-border group-last:hidden" />
@@ -81,9 +81,9 @@ function TimelineItem({ run }: { run: AutomationRun }) {
           <div
             className={`h-4 w-4 rounded-full border-2 ${
               run.status === "success"
-                ? "border-green-500 bg-green-500"
+                ? "border-primary bg-primary"
                 : run.status === "failed"
-                  ? "border-red-500 bg-red-500"
+                  ? "border-destructive bg-destructive"
                   : "border-muted-foreground bg-background"
             }`}
           />

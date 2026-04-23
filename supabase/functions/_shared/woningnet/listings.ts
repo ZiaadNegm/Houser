@@ -319,18 +319,14 @@ export function parseListings(rawList: any[]): ParseListingsResult {
       id: String(item.Id ?? ""),
       address: `${item.Adres?.Straatnaam ?? ""} ${item.Adres?.Huisnummer ?? ""}${item.Adres?.Huisletter || ""}, ${item.Adres?.Woonplaats ?? ""}`,
       neighborhood: item.Adres?.Wijk ?? "",
-      postcode: item.Adres?.Postcode ?? "",
       position: parseInt(item.VoorlopigePositie, 10) || 9999,
       rooms: item.Eenheid?.AantalKamers ?? 0,
       rentNet: item.Eenheid?.NettoHuur ?? "0",
-      energyLabel: item.Eenheid?.EnergieLabel ?? "",
       contractType: item.ContractVorm ?? "",
       propertyType: item.Eenheid?.DetailSoort ?? "",
       deadline: item.EinddatumTijd ?? "",
       hasApplied: item.HeeftGereageerd === true,
       canRevoke: item.IsIntrekkenReactieToegestaan === true,
-      totalApplicants: parseInt(item.AantalReactiesOpPublicatie, 10) || 0,
-      owner: item.Eenheid?.Eigenaar ?? "",
       imageUrl: item.Foto_Locatie ?? "",
     });
   }

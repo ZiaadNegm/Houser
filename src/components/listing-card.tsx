@@ -112,6 +112,7 @@ export function ListingCard({
             disabled={loading}
             className="absolute top-2 left-2 rounded-full bg-background/80 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
             title="Block this listing"
+            aria-label="Block this listing"
           >
             <Ban className="h-3.5 w-3.5" />
           </button>

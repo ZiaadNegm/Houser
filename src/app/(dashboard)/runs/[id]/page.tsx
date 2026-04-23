@@ -64,11 +64,11 @@ function StepTimeline({ steps, runStartedAt }: { steps: StepLogEntry[]; runStart
             {/* Status dot */}
             <div className="relative z-10 mt-1 flex-shrink-0">
               {step.status === "success" ? (
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-white">
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   <Check className="h-2.5 w-2.5" />
                 </div>
               ) : step.status === "failed" ? (
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white">
+                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-white">
                   <X className="h-2.5 w-2.5" />
                 </div>
               ) : (
@@ -181,7 +181,7 @@ export default async function RunDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           {run.error_message && (
-            <div className="mt-4 rounded-md border border-destructive/50 bg-red-50 p-3 dark:bg-red-950/20">
+            <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">{run.error_message}</p>
             </div>
           )}

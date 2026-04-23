@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/supabase/with-auth";
 import { logApiError } from "@/lib/api-logger";
 import {
   getBlacklistEntries,
+  getBlacklistEntry,
   addBlacklistEntry,
   removeBlacklistEntry,
   type BlacklistEntryType,
@@ -70,10 +71,7 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
       "code" in err &&
       (err as { code: string }).code === "23505"
     ) {
-      const entries = await getBlacklistEntries(supabase, user.id);
-      const existing = entries.find(
-        (e) => e.type === type && e.value === value
-      );
+      const existing = await getBlacklistEntry(supabase, user.id, type as BlacklistEntryType, value);
       if (existing) return NextResponse.json(existing);
     }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/supabase/with-auth";
+import { logApiError } from "@/lib/api-logger";
 
 export const GET = withAuth(async ({ supabase, user }) => {
   const { data, error } = await supabase
@@ -10,10 +11,11 @@ export const GET = withAuth(async ({ supabase, user }) => {
     .single();
 
   if (error) {
-    console.error(`[dry-run/GET] user=${user.id} query failed: ${error.message}`);
+    logApiError("dry-run/GET", user.id, error);
+    return NextResponse.json({ error: "Failed to fetch dry run setting" }, { status: 500 });
   }
 
-  const enabled = data?.value === false ? false : true;
+  const enabled = data.value !== false;
   return NextResponse.json({ enabled });
 });
 
@@ -36,7 +38,7 @@ export const POST = withAuth(async ({ supabase, user }, req) => {
     );
 
   if (error) {
-    console.error(`[dry-run/POST] user=${user.id} upsert failed: ${error.message}`);
+    logApiError("dry-run/POST", user.id, error);
     return NextResponse.json({ error: "Failed to update dry run setting" }, { status: 500 });
   }
 

@@ -64,7 +64,6 @@ Deno.test("parseListings maps all dwelling fields correctly", () => {
   assertEquals(l.id, "111");
   assertEquals(l.address, "Teststraat 1, Almere");
   assertEquals(l.neighborhood, "Testwijk");
-  assertEquals(l.postcode, "1234AB");
   assertEquals(l.position, 42);
   assertEquals(l.rooms, 3);
   assertEquals(l.rentNet, "700");
