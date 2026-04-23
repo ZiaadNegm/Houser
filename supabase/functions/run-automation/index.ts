@@ -83,9 +83,20 @@ async function stepLogin(ctx: RunContext): Promise<RunContext> {
   return { ...ctx, session, secrets: [...ctx.secrets, email, password] };
 }
 
+type FetchMeta = {
+  rawCount: number;
+  skippedNonDwellingCount: number;
+  skippedUnitTypeBreakdown: Record<string, number>;
+};
+
 async function stepFetchListings(ctx: RunContext): Promise<RunContext> {
   const { result, session } = await fetchListings(ctx.session!);
-  return { ...ctx, session, listings: result.listings };
+  const meta: FetchMeta = {
+    rawCount: result.rawCount,
+    skippedNonDwellingCount: result.skippedNonDwellingCount,
+    skippedUnitTypeBreakdown: result.skippedUnitTypeBreakdown,
+  };
+  return { ...ctx, session, listings: result.listings, _fetchMeta: meta } as RunContext & { _fetchMeta: FetchMeta };
 }
 
 async function stepLoadSettings(ctx: RunContext): Promise<RunContext> {
@@ -250,7 +261,15 @@ const pipeline: PipelineStep[] = [
   {
     name: "fetch_listings",
     fn: stepFetchListings,
-    detail: (ctx) => ({ listings_fetched: ctx.listings?.length ?? 0 }),
+    detail: (ctx) => {
+      const meta = (ctx as RunContext & { _fetchMeta?: FetchMeta })._fetchMeta;
+      return {
+        listings_fetched: ctx.listings?.length ?? 0,
+        raw_count: meta?.rawCount ?? 0,
+        skipped_non_dwelling_count: meta?.skippedNonDwellingCount ?? 0,
+        skipped_unit_type_breakdown: meta?.skippedUnitTypeBreakdown ?? {},
+      };
+    },
   },
   {
     name: "load_settings",

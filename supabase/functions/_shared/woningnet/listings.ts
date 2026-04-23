@@ -283,30 +283,63 @@ export function buildListingsRequestBody(
   };
 }
 
+// WoningNet mixes dwellings and non-dwellings (parkeerplaatsen, bergingen, …) into
+// the same PublicatieLijst.List[]. We only ever want to apply to dwellings, so we
+// drop anything whose root-level EenheidSoort is not exactly "Woonruimte".
+// Allow-list (not deny-list) on purpose: if WoningNet introduces a new non-dwelling
+// EenheidSoort tomorrow, we stay safe instead of auto-applying to it.
+const DWELLING_UNIT_TYPE = "Woonruimte";
+
+export interface ParseListingsResult {
+  listings: WoningNetListing[];
+  skippedNonDwellingCount: number;
+  skippedUnitTypeBreakdown: Record<string, number>;
+}
+
 /**
  * Parse raw WoningNet listing items into normalized WoningNetListing objects.
+ * Drops non-dwelling units (parkeerplaatsen etc.) — we never want to apply to those.
  * Defensive: uses fallbacks for missing/unparseable fields.
  */
 // deno-lint-ignore no-explicit-any
-export function parseListings(rawList: any[]): WoningNetListing[] {
-  return rawList.map((item) => ({
-    id: String(item.Id ?? ""),
-    address: `${item.Adres?.Straatnaam ?? ""} ${item.Adres?.Huisnummer ?? ""}${item.Adres?.Huisletter || ""}, ${item.Adres?.Woonplaats ?? ""}`,
-    neighborhood: item.Adres?.Wijk ?? "",
-    postcode: item.Adres?.Postcode ?? "",
-    position: parseInt(item.VoorlopigePositie, 10) || 9999,
-    rooms: item.Eenheid?.AantalKamers ?? 0,
-    rentNet: item.Eenheid?.NettoHuur ?? "0",
-    energyLabel: item.Eenheid?.EnergieLabel ?? "",
-    contractType: item.ContractVorm ?? "",
-    propertyType: item.Eenheid?.DetailSoort ?? "",
-    deadline: item.EinddatumTijd ?? "",
-    hasApplied: item.HeeftGereageerd === true,
-    canRevoke: item.IsIntrekkenReactieToegestaan === true,
-    totalApplicants: parseInt(item.AantalReactiesOpPublicatie, 10) || 0,
-    owner: item.Eenheid?.Eigenaar ?? "",
-    imageUrl: item.Foto_Locatie ?? "",
-  }));
+export function parseListings(rawList: any[]): ParseListingsResult {
+  const listings: WoningNetListing[] = [];
+  const breakdown: Record<string, number> = {};
+  let skipped = 0;
+
+  for (const item of rawList) {
+    const unitType = String(item.EenheidSoort ?? "");
+    if (unitType !== DWELLING_UNIT_TYPE) {
+      skipped++;
+      const key = unitType || "<missing>";
+      breakdown[key] = (breakdown[key] ?? 0) + 1;
+      continue;
+    }
+    listings.push({
+      id: String(item.Id ?? ""),
+      address: `${item.Adres?.Straatnaam ?? ""} ${item.Adres?.Huisnummer ?? ""}${item.Adres?.Huisletter || ""}, ${item.Adres?.Woonplaats ?? ""}`,
+      neighborhood: item.Adres?.Wijk ?? "",
+      postcode: item.Adres?.Postcode ?? "",
+      position: parseInt(item.VoorlopigePositie, 10) || 9999,
+      rooms: item.Eenheid?.AantalKamers ?? 0,
+      rentNet: item.Eenheid?.NettoHuur ?? "0",
+      energyLabel: item.Eenheid?.EnergieLabel ?? "",
+      contractType: item.ContractVorm ?? "",
+      propertyType: item.Eenheid?.DetailSoort ?? "",
+      deadline: item.EinddatumTijd ?? "",
+      hasApplied: item.HeeftGereageerd === true,
+      canRevoke: item.IsIntrekkenReactieToegestaan === true,
+      totalApplicants: parseInt(item.AantalReactiesOpPublicatie, 10) || 0,
+      owner: item.Eenheid?.Eigenaar ?? "",
+      imageUrl: item.Foto_Locatie ?? "",
+    });
+  }
+
+  return {
+    listings,
+    skippedNonDwellingCount: skipped,
+    skippedUnitTypeBreakdown: breakdown,
+  };
 }
 
 /**
@@ -333,13 +366,19 @@ export async function fetchListings(
     );
   }
 
-  const listings = parseListings(rawList);
+  const { listings, skippedNonDwellingCount, skippedUnitTypeBreakdown } =
+    parseListings(rawList);
   console.log(
-    `[woningnet:listings] Parsed ${listings.length} listings from ${rawList.length} raw items`,
+    `[woningnet:listings] Parsed ${listings.length} dwellings from ${rawList.length} raw items (skipped ${skippedNonDwellingCount} non-dwellings: ${JSON.stringify(skippedUnitTypeBreakdown)})`,
   );
 
   return {
-    result: { listings, rawCount: rawList.length },
+    result: {
+      listings,
+      rawCount: rawList.length,
+      skippedNonDwellingCount,
+      skippedUnitTypeBreakdown,
+    },
     session: updatedSession,
   };
 }
